@@ -1,0 +1,100 @@
+\documentclass[times, utf8, diplomski, numeric]{fer}
+
+\usepackage{booktabs}
+\usepackage{listings}
+
+\usepackage{xcolor}
+\usepackage{color, colortbl}
+\usepackage{pgfplotstable}
+\usepackage{pgfplots}
+
+\usepackage{url}
+\def\UrlBreaks{\do/\do-}
+\usepackage{breakurl}
+\usepackage[breaklinks]{hyperref}
+
+\hypersetup{
+	colorlinks,
+	linkcolor={black},
+	citecolor={black},
+	urlcolor={black}
+}
+
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{lightblue}{rgb}{0.7,0.99,0.99}
+
+\lstdefinestyle{mystyle}{
+	frame=single,   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	stringstyle=\color{codepurple},
+	basicstyle=\ttfamily,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\renewcommand*{\lstlistingname}{Isječak koda}
+\renewcommand*\lstlistlistingname{Popis isječaka koda}
+
+\begin{document}
+
+% TODO: Navedite broj rada.
+%\thesisnumber{358}
+
+% TODO: Navedite naslov rada.
+%\title{Sustav za udaljeni nadzor u poljoprivredi temeljen na platformi ESP32-C3 i AWS-uslugama}
+
+% TODO: Navedite vaše ime i prezime.
+%\author{Jelena Gavran}
+
+%\maketitle
+
+% Ispis stranice s napomenom o umetanju izvornika rada. Uklonite naredbu \izvornik ako želite izbaciti tu stranicu.
+%\izvornik
+
+% Dodavanje zahvale ili prazne stranice. Ako ne želite dodati zahvalu, naredbu ostavite radi prazne stranice.
+\zahvala{}
+
+\tableofcontents
+
+\begingroup
+\renewcommand*\listfigurename{Popis slika}
+\listoffigures
+\addcontentsline{toc}{chapter}{\lstlistlistingname}
+\lstlistoflistings
+\listoftables
+\endgroup
+
+\include{Uvod}
+%\include{Opis_Sustava}
+\include{Zakljucak}
+
+\bibliography{literatura}{}
+\bibliographystyle{fer}
+
+\title{Sustav za udaljeni nadzor u poljoprivredi temeljen na platformi ESP32-C3 i AWS-uslugama}
+\begin{sazetak}
+Ovo je moj hrvatski sažetak.
+
+\kljucnerijeci{prva, druga, treća, ključna, riječ}
+\end{sazetak}
+
+% TODO: Navedite naslov na engleskom jeziku.
+\engtitle{System For Remote Monitoring In Agriculture Based On ESP32-C3 Platform and AWS Services}
+\begin{abstract}
+This is my english abstract.
+
+\keywords{first, second, third, key, word}
+\end{abstract}
+
+\end{document}
