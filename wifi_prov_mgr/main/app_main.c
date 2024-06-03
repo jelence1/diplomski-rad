@@ -31,11 +31,7 @@
 #include "./espressif__qrcode/qrcodegen.h"
 #include "qrcode.h"
 
-#if CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
-#include "esp_lcd_sh1107.h"
-#else
 #include "esp_lcd_panel_vendor.h"
-#endif
 
 #ifdef CONFIG_EXAMPLE_PROV_TRANSPORT_BLE
 #include <wifi_provisioning/scheme_ble.h>
@@ -287,6 +283,7 @@ esp_err_t custom_prov_data_handler(uint32_t session_id, const uint8_t *inbuf, ss
 void generate_qr_code_lcd(esp_qrcode_handle_t qrcode)
 {
     ESP_LOGI(TAG, "%s", "Started generate_qr_code_lcd...");
+    
     int size = qrcodegen_getSize(qrcode);
 
     // Calculate the scale factor
@@ -298,26 +295,31 @@ void generate_qr_code_lcd(esp_qrcode_handle_t qrcode)
     // Calculate vertical shift
     int shift_y = (EXAMPLE_LCD_V_RES - size * scale)/2;
 
-    lv_obj_t *screen = lv_scr_act();
-    lv_obj_clean(screen); // Clear the screen to ensure it's dark
+    if (lvgl_port_lock(0)) {
+        lv_obj_t *screen = lv_scr_act();
+        lv_obj_clean(screen); // Clear the screen to ensure it's dark
 
-    // Create a canvas object
-    lv_obj_t *canvas = lv_canvas_create(screen);
-    static lv_color_t cbuf[LV_CANVAS_BUF_SIZE_TRUE_COLOR(EXAMPLE_LCD_H_RES, EXAMPLE_LCD_V_RES)];
-    lv_canvas_set_buffer(canvas, cbuf, EXAMPLE_LCD_H_RES, EXAMPLE_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
-    lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
+        // Create a canvas object
+        lv_obj_t *canvas = lv_canvas_create(screen);
+        static lv_color_t cbuf[LV_CANVAS_BUF_SIZE_TRUE_COLOR(EXAMPLE_LCD_H_RES, EXAMPLE_LCD_V_RES)];
+        lv_canvas_set_buffer(canvas, cbuf, EXAMPLE_LCD_H_RES, EXAMPLE_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
+        lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
 
-    // Draw the QR code on the canvas
-    for (uint8_t y = 0; y < size; y++) {
-        for (uint8_t x = 0; x < size; x++) {
-            if (qrcodegen_getModule(qrcode, x, y)) {
-                for (int dy = 0; dy < scale; dy++) {
-                    for (int dx = 0; dx < scale; dx++) {
-                        lv_canvas_set_px(canvas, shift_x + x * scale + dx, shift_y + y * scale + dy, lv_color_black());
+        // Draw the QR code on the canvas
+        for (uint8_t y = 0; y < size; y++) {
+            for (uint8_t x = 0; x < size; x++) {
+                if (qrcodegen_getModule(qrcode, x, y)) {
+                    for (int dy = 0; dy < scale; dy++) {
+                        for (int dx = 0; dx < scale; dx++) {
+                            lv_canvas_set_px(canvas, shift_x + x * scale + dx, shift_y + y * scale + dy, lv_color_black());
+                        }
                     }
                 }
             }
         }
+
+        // Release the mutex
+        lvgl_port_unlock();
     }
 }
 
@@ -345,7 +347,6 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
     }
 #ifdef CONFIG_EXAMPLE_PROV_SHOW_QR
     ESP_LOGI(TAG, "Scan this QR code from the provisioning application for Provisioning.");
-    //esp_qrcode_config_t cfg = ESP_QRCODE_CONFIG_DEFAULT();
     esp_qrcode_config_t cfg = {
         .display_func = generate_qr_code_lcd
     , 
@@ -361,7 +362,7 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
     ESP_LOGI(TAG, "If QR code is not visible, copy paste the below URL in a browser.\n%s?data=%s", QRCODE_BASE_URL, payload);
 
     /*display the qr code on lcd (Jelena)*/
-    ESP_LOGI(TAG, "Display LVGL Scroll Text (not.)");
+    ESP_LOGI(TAG, "Display QR code.");
     // Lock the mutex due to the LVGL APIs are not thread-safe
     /*if (lvgl_port_lock(0)) {
         ////example_lvgl_demo_ui(disp, generated_qr);
@@ -374,7 +375,7 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 
 void app_main(void)
 {
-        ESP_LOGI(TAG, "Initialize I2C bus");
+    ESP_LOGI(TAG, "Initialize I2C bus");
     i2c_master_bus_handle_t i2c_bus = NULL;
     i2c_master_bus_config_t bus_config = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
@@ -640,7 +641,7 @@ void app_main(void)
     lv_disp_t *disp = lvgl_port_add_disp(&disp_cfg);
 
     /* Rotation of the screen */
-    lv_disp_set_rotation(disp, LV_DISP_ROT_NONE); //(Jelena) LV_DISP_ROT_90
+    lv_disp_set_rotation(disp, LV_DISP_ROT_180); //(Jelena) LV_DISP_ROT_90
     //
 
 #ifdef CONFIG_EXAMPLE_PROV_TRANSPORT_BLE
@@ -677,10 +678,24 @@ void app_main(void)
         xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_EVENT, true, true, portMAX_DELAY);
     }
 #else
-     while (1) {
-         ESP_LOGI(TAG, "Hello World!");
-         vTaskDelay(1000 / portTICK_PERIOD_MS);
-     }
+    ESP_LOGI(TAG, "Successfully provisioned the device!");
+    // Lock the mutex due to the LVGL APIs are not thread-safe
+    if (lvgl_port_lock(0)) {
+        lv_obj_t *screen = lv_scr_act();
+        lv_obj_clean(screen); // Clear the screen to ensure it's dark
+        lv_obj_t *label = lv_label_create(screen);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_label_set_text(label, "Hello World!");
+        lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
+        // Release the mutex
+        lvgl_port_unlock();
+    }
+
+
+    while (1) {
+        //ESP_LOGI(TAG, "Hello World!");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 #endif
 
 }

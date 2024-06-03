@@ -14,6 +14,6 @@ void example_lvgl_demo_ui(lv_disp_t *disp, char *payload)
     //lv_label_set_text(label, "Hello Espressif, Hello LVGL.");
     lv_label_set_text(label, payload);
     /* Size of the screen (if you use rotation 90 or 270, please set disp->driver->ver_res) */
-    lv_obj_set_width(label, disp->driver->ver_res); //(Jelena) from disp->driver->hor_res
+    lv_obj_set_width(label, disp->driver->hor_res); //(Jelena) from disp->driver->hor_res
     lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
 }
