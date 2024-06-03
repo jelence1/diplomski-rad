@@ -1,0 +1,11 @@
+- AWS docs, fleet provisioning: 
+	https://docs.aws.amazon.com/iot/latest/developerguide/provision-wo-cert.html
+- AWS IOT Provision by Claim with ESP32, uses ESP IDF (YT link):
+	https://www.youtube.com/watch?v=xo0YG-1H1Fs
+- AWS IoT device provisioning with Fleet provisioning templates (library):
+	https://github.com/toygame/aws-iot-device-provisioning-esp32
+
+
+- deciding on transport (SoftAP vs BLE):
+	https://docs.espressif.com/projects/esp-idf/en/v5.1/esp32/api-reference/provisioning/provisioning.html
+	--> chapter "Deciding on Transport"
