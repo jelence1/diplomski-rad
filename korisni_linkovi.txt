@@ -11,3 +11,16 @@
 - deciding on transport (SoftAP vs BLE):
 	https://docs.espressif.com/projects/esp-idf/en/v5.1/esp32/api-reference/provisioning/provisioning.html
 	--> chapter "Deciding on Transport"
+
+- provisioning methods:
+	https://eu-north-1.console.aws.amazon.com/iot/home?region=eu-north-1#/provisioningtemplate/create/provisioningmethods
+- Get started with AWS IoT Core provisioning:
+	https://www.youtube.com/watch?v=qAoKQfrkMgc
+- Fleet provisioning graphics:
+	https://docs.aws.amazon.com/whitepapers/latest/device-manufacturing-provisioning/provisioning-identity-in-aws-iot-core-for-device-connections.html
+
+- Very good issue thread about custom provisioning & mqtt:
+	https://github.com/espressif/esp-aws-iot/issues/87
+
+- Install Grafana to EC2 AWS:
+	https://www.youtube.com/watch?v=qQKwywjSAgw
