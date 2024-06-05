@@ -1,12 +1,12 @@
 \chapter{Amazon Web Services (AWS)}
 
-Amazon usluge za web (engl. \textit{Amazon Web Services} - AWS) sveobuhvatna je platforma za računarstvo u oblaku koju pruža Amazon te sadrži brojne usluge u oblaku, uključujući infrastrukturu (engl. \textit{Infrastructure as a Service} - IaaS), platformu (engl. \textit{Platform as a Service} - PaaS) i softver (engl. \textit{Software as a Service} - SaaS). AWS usluge nude organizacijske alate kao što su računalna snaga, baza podataka i usluge isporuke sadržaja \cite{what_is_aws}. 
+Amazon usluge za web \engl{Amazon Web Services - AWS} sveobuhvatna je platforma za računarstvo u oblaku koju pruža Amazon te sadrži brojne usluge u oblaku, uključujući infrastrukturu \engl{Infrastructure as a Service - IaaS}, platformu \engl{Platform as a Service - PaaS} i softver \engl{Software as a Service - SaaS}. AWS usluge nude organizacijske alate kao što su računalna snaga, baza podataka i usluge isporuke sadržaja \cite{what_is_aws}. 
 
 AWS je podijeljen u više različitih usluga koje se mogu pojedinačno konfigurirati na temelju korisnikovih potreba. Neke od usluga koje nudi AWS su: pohrana, baze podataka, migracija, povezivanje, monitoriranje, sigurnost, analitika, umjetna inteligencija te razvoj mobilnih aplikacija. 
 
-AWS pruža usluge iz mnogo podatkovnih centara (engl. \textit{data center} - DC) koji su raspodijeljeni po zonama dostupnosti (engl. \textit{availability zone} - AZ) diljem regija cijelog svijeta. Jedna regija obuhvaća nekoliko fizički bliskih zona povezanih mrežom niske latencije. 
+AWS pruža usluge iz mnogo podatkovnih centara \engl{data center - DC} koji su raspodijeljeni po zonama dostupnosti \engl{availability zone - AZ} diljem regija cijelog svijeta. Jedna regija obuhvaća nekoliko fizički bliskih zona povezanih mrežom niske latencije. 
 
-Također, nude se brojne mogućnosti za razvojne inženjere u sklopu AWS-a. Nudi alate naredbenog retka (engl. \textit{command-line tools}) i pakete za razvoj programa (engl. \textit{Software Development Kit} - SDK) za puštanje aplikacija u produkciju (engl. \textit{deployment}) i upravljanje vlastitim uslugama i aplikacijama. Paketi za razvoj programa dostupni su u raznim programskim jezicima, uključujući programske jezike C++, Android, iOS, Java, Node.js, Python i Ruby.
+Također, nude se brojne mogućnosti za razvojne inženjere u sklopu AWS-a. Nudi alate naredbenog retka \engl{command-line tools} i pakete za razvoj programa \engl{Software Development Kit - SDK} za puštanje aplikacija u produkciju \engl{deployment} i upravljanje vlastitim uslugama i aplikacijama. Paketi za razvoj programa dostupni su u raznim programskim jezicima, uključujući programske jezike C++, Android, iOS, Java, Node.js, Python i Ruby.
  
 \section{Usluge AWS-a za IoT sustave}
 
@@ -21,9 +21,9 @@ AWS isto tako nudi brojne usluge za razvoj IoT sustava. Usluga AWS-a za IoT pru�
 
 AWS IoT podržava sljedeće komunikacijske protokole:
 \begin{itemize}
-	\item MQTT (engl. \textit{Message Queuing Telemetry Transport}),
+	\item MQTT \engl{Message Queuing Telemetry Transport},
 	\item HTTPS,
-	\item LoRaWAN (engl. \textit{Long Range Wide Area Network}),
+	\item LoRaWAN \engl{Long Range Wide Area Network},
 	\item TLS.
 \end{itemize}
 
@@ -31,7 +31,7 @@ U nastavku su opisane usluge za razvoj IoT sustava u sklopu AWS-a.
 
 \section{AWS IoT Core}
 
-AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan (engl. \textit{lightweight}) protokol za prijenos poruka temeljen na objavi/pretplati sustavu, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Na slici \ref{fig:aws_iot_core_overview} nalazi se pregled rada usluge AWS IoT Core.
+AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan \engl{lightweight} protokol za prijenos poruka temeljen na objavi/pretplati sustavu, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Na slici \ref{fig:aws_iot_core_overview} nalazi se pregled rada usluge AWS IoT Core.
 
 \begin{figure}[ht]
 	\centering
@@ -59,7 +59,7 @@ Prilazni uređaj omogućuje uređajima sigurnu i efikasnu komunikaciju sa sustav
 
 Broker za poruke pruža mehanizam uređajima i aplikacijama slanje i primanje poruka. Moguće je koristiti protokol MQTT ili direktno WebSocket za objavu i pretplatu na teme. Uređaji i klijenti koriste HTTP REST sučelje za objavu poruka brokeru. Broker zatim distribuira podatke na uređaje koji su se pretplatili na određene teme kao i na druge AWS aplikacije te usluge koje prate teme na brokeru.
 
-AWS IoT Core za protokol LoRaWAN omogućava postavljanje privatne LoRaWAN mreže tako što poveže LoRaWAN te prilazne uređaje na AWS bez potrebe za razvojem mrežnog servera za LoRaWAN (engl. \textit{LoRaWAN Network Server} - LNS). Poruke primljene od LoRaWAN uređaja šalju se na stroj za pravila (engl. \textit{rules engine}) gdje se formatiraju i prosljeđuju ostalim AWS uslugama.
+AWS IoT Core za protokol LoRaWAN omogućava postavljanje privatne LoRaWAN mreže tako što poveže LoRaWAN te prilazne uređaje na AWS bez potrebe za razvojem mrežnog servera za LoRaWAN \engl{LoRaWAN Network Server - LNS}. Poruke primljene od LoRaWAN uređaja šalju se na stroj za pravila \engl{rules engine} gdje se formatiraju i prosljeđuju ostalim AWS uslugama.
 
 Stroj za pravila povezuje podatke iz brokera s drugim AWS IoT uslugama za pohranu i dodatnu obradu. Primjerice, moguće je umetati ili pretraživati po podatkovnim tablicama ili pozvati određene definirane funkcije na temelju izraza definiranog u stroju. Isto tako, moguće je obraditi te podatke i proslijediti novostvoreni format poruka drugim uslugama ili bazama podataka.
 
@@ -69,11 +69,11 @@ Upravljačke usluge AWS IoT Core komponente pružaju sigurnost uređaja te znač
 
 Moguće je definirati vlastite autorizatore radi upravljanja autentifikacijskim i autorizacijskim strategijama koristeći vlastiti servis za autentifikaciju i Lambda funkcije za računanje koje AWS nudi. 
 
-Usluga za postavljanje (engl. \textit{provisioning}) uređaja omogućava konfiguriranje i prijavu uređaja u AWS koristeći predložak koji opisuje resurse potrebne uređaju: \textit{stvar}, certifikat i nekoliko politika. \textit{Stvar} je unos u registar koji sadrži atribute opisa uređaja. Uređaji koriste certifikate za autentifikaciju s AWS IoT sustavom. Politike određuju koje operacije uređaj može izvršiti. 
+Usluga za postavljanje \engl{provisioning} uređaja omogućava konfiguriranje i prijavu uređaja u AWS koristeći predložak koji opisuje resurse potrebne uređaju: \textit{stvar}, certifikat i nekoliko politika. \textit{Stvar} je unos u registar koji sadrži atribute opisa uređaja. Uređaji koriste certifikate za autentifikaciju s AWS IoT sustavom. Politike određuju koje operacije uređaj može izvršiti. 
 
 Isto tako, moguće je definirati grupe za lakšu kategorizaciju i upravljanje uređajima. Grupe također mogu imati podgrupe, i tako graditi hijerarhiju grupa. Sve akcije izvršene na roditeljima propagiraju se do najdubljih podgrupa. Dozvole dodijeljene grupi primjenjuju se na sve uređaje u toj grupi i svim njihovim podgrupama. 
 
-Usluga za poslove (engl. \textit{jobs}) omogućava definiranje udaljenih operacija koje se pošalju i izvrše na fizičkim uređajima spojenih u oblak. Posao se može odnositi preuzimanje i instalaciju aplikacija, ažuriranje sustava, ponovno pokretanje, obnova certifikata i slično.
+Usluga za poslove \engl{jobs} omogućava definiranje udaljenih operacija koje se pošalju i izvrše na fizičkim uređajima spojenih u oblak. Posao se može odnositi preuzimanje i instalaciju aplikacija, ažuriranje sustava, ponovno pokretanje, obnova certifikata i slično.
 
 Registar organizira resurse pridružene uređajima u oblaku. Moguće je registrirati uređaje i pridružiti im maksimalno po tri atributa. Isto tako, uređajima se mogu pridružiti certifikati i klijentski ID za MQTT komunikaciju kako bi se olakšalo otklanjanje budućih grešaka.
 
@@ -83,7 +83,7 @@ Usluga za sigurnost i identitet pruža dijeljenu odgovornost za sigurnost unutar
 
 AWS IoT Core osigurava pouzdano aplikacijsko iskustvo iako uređaji nisu uvijek povezani. 
 
-Sjena uređaja (engl. \textit{Device Shadow}) dokument je u JSON formatu koji se koristi za pohranu i dohvat trenutnog stanja i informacija o uređaju. AWS nudi uslugu koja održava stanje uređaja (engl. \textit{Device Shadow service}) kako bi aplikacije mogle komunicirati s uređajem bez obzira je li uređaj na mreži ili ne. Kada uređaj nije priključen na mrežu, usluga sjene uređaja upravlja podacima za povezane uređaje. Kada se uređaj ponovno spoji na mrežu, sinkronizira stanje sa sjenom uređaja koja se nalazi u oblaku. Uređaji također mogu objavi svoje stanje usluzi u bilo kojem trenutku kako bi bilo na raspolaganju drugim aplikacijama i uređajima. 
+Sjena uređaja \engl{Device Shadow} dokument je u JSON formatu koji se koristi za pohranu i dohvat trenutnog stanja i informacija o uređaju. AWS nudi uslugu koja održava stanje uređaja \engl{Device Shadow service} kako bi aplikacije mogle komunicirati s uređajem bez obzira je li uređaj na mreži ili ne. Kada uređaj nije priključen na mrežu, usluga sjene uređaja upravlja podacima za povezane uređaje. Kada se uređaj ponovno spoji na mrežu, sinkronizira stanje sa sjenom uređaja koja se nalazi u oblaku. Uređaji također mogu objavi svoje stanje usluzi u bilo kojem trenutku kako bi bilo na raspolaganju drugim aplikacijama i uređajima. 
 
 \subsection{AWS IoT Fleet Provisioning}
 
@@ -119,13 +119,13 @@ AWS IoT Events usluga služi za praćenje događaja u sustavu. Ova usluga prati 
 
 \subsubsection{IoT FleetWise}
 
-AWS IoT FleetWise jest usluga koja se koristi za prikupljanje podataka od vozila i njihovu organizaciju u oblaku. Prikupljeni se podaci mogu koristiti za poboljšanje kvalitete, performansa i autonomije vozila. Također podržava više različitih protokola i podatkovnih formata. Ova usluga pomaže pri transformaciji \textit{low-level} poruka u oblik čitljiv čovjeku i standardizira podatke radi lakše analize u oblaku. Moguće je također definirati vrstu podataka i trenutak u kojem se ti podaci šalju u oblak.
+AWS IoT FleetWise jest usluga koja se koristi za prikupljanje podataka od vozila i njihovu organizaciju u oblaku. Prikupljeni se podaci mogu koristiti za poboljšanje kvalitete, performansa i autonomije vozila. Također podržava više različitih protokola i podatkovnih formata. Ova usluga pomaže pri transformaciji poruka niske razine \engl{low-level} u oblik čitljiv čovjeku i standardizira podatke radi lakše analize u oblaku. Moguće je također definirati vrstu podataka i trenutak u kojem se ti podaci šalju u oblak.
 
 Kada su podaci o vozilu u oblaku, mogu se koristiti u aplikacijama koje analiziraju zdravlje vozila. Ove informacije mogu pomoći pri identifikaciji potencijalnih problema u održavanju i pri unapređenju naprednih tehnologija poput autonomne i asistirane vožnje integracijom strojnog učenja.
 
 \subsubsection{IoT Greengrass}
 
-AWS IoT Greengrass jest usluga otvorenog koda (engl. \textit{open source}) za računarstvo na rubu (engl. \textit{edge computing}) i u oblaku koja pomaže pri izradi, objavi i upravljanju IoT aplikacija na uređajima. Može se koristiti za omogućavanje uređajima lokalno reagiranje na podatke koje generiraju, pokretanje modela strojnog učenja za predikciju, te filtriranje i agregaciju podataka s uređaja. Omogućava uređajima da prikupljaju i analiziraju podatke ne u oblaku, nego ili na samom uređaju ili drugom mjestu koje je bliže izvorištu tih podataka. Također može komunicirati na siguran način s uslugom AWS IoT Core i izvoziti podatke u oblak. Karakteristika računarstva u rubu, koje omogućava ova komponenta, jest približavanje računanja izvorišnim uređajima, čime se poboljšava vrijeme odziva i štedi propusnost \cite{what_is_edge}.
+AWS IoT Greengrass jest usluga otvorenog koda \engl{open source} za računarstvo na rubu \engl{edge computing} i u oblaku koja pomaže pri izradi, objavi i upravljanju IoT aplikacija na uređajima. Može se koristiti za omogućavanje uređajima lokalno reagiranje na podatke koje generiraju, pokretanje modela strojnog učenja za predikciju, te filtriranje i agregaciju podataka s uređaja. Omogućava uređajima da prikupljaju i analiziraju podatke ne u oblaku, nego ili na samom uređaju ili drugom mjestu koje je bliže izvorištu tih podataka. Također može komunicirati na siguran način s uslugom AWS IoT Core i izvoziti podatke u oblak. Karakteristika računarstva u rubu, koje omogućava ova komponenta, jest približavanje računanja izvorišnim uređajima, čime se poboljšava vrijeme odziva i štedi propusnost \cite{what_is_edge}.
 
 \subsubsection{IoT Roborunner}
 
@@ -135,7 +135,7 @@ AWS IoT RoboRunner nova je usluga koja pruža infrastrukturu za optimizaciju rob
 
 AWS IoT TwinMaker usluga je za kreiranje operativnih digitalnih dvojnika fizičkih i digitalnih sustava. Stvara digitalne vizualizacije koristeći mjerenja i analize iz raznih senzora i kamera radi praćenja stvarnog stanja i uvjeta u kojima se objekt, zgrada ili kompleks nalazi. Podaci iz stvarnog svijeta se mogu koristiti za dijagnostiku i ispravljanje pogrešaka ili pak optimizaciju operacija. 
 
-Digitalni dvojnik (engl. \textit{digital twin}) digitalna je reprezentacija sustava i svih njegovih fizičkih i digitalnih komponenti. Dinamički se ažurira primitkom novih podataka kako bi simulirao stvarno stanje i ponašanje sustava. 
+Digitalni dvojnik \engl{digital twin} digitalna je reprezentacija sustava i svih njegovih fizičkih i digitalnih komponenti. Dinamički se ažurira primitkom novih podataka kako bi simulirao stvarno stanje i ponašanje sustava. 
 
 
 \subsubsection{IoT SiteWise}

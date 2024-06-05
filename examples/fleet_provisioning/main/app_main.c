@@ -742,20 +742,21 @@ void app_main()
         xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_EVENT, true, true, portMAX_DELAY);
     }
 #else
-    ESP_LOGI(TAG, "Successfully provisioned the device!");
+    ESP_LOGI(TAG, "Successful Wi-Fi provisioning!");
     // Lock the mutex due to the LVGL APIs are not thread-safe
     if (lvgl_port_lock(0)) {
         lv_obj_t *screen = lv_scr_act();
         lv_obj_clean(screen); // Clear the screen to ensure it's dark
         lv_obj_t *label = lv_label_create(screen);
         lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
-        lv_label_set_text(label, "Hello World!");
+        lv_label_set_text(label, "Wi-Fi connected successfully!");
         lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
         // Release the mutex
         lvgl_port_unlock();
     }
 
     // Start Fleet Provisioning
+    ESP_LOGI(TAG, "Start Fleet Provisioning...");
     aws_iot_demo_main(0,NULL);
 
     vTaskDelay(pdMS_TO_TICKS(10 * 1000));
