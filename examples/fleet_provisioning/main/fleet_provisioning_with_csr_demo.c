@@ -463,7 +463,7 @@ static bool unsubscribeFromRegisterThingResponseTopics( void )
  * the Fleet Provisioning library to generate and validate AWS IoT Fleet
  * Provisioning MQTT topics, and use the coreMQTT library to communicate with
  * the AWS IoT Fleet Provisioning APIs. */
-int aws_iot_demo_main( int argc,
+int fleet_provisioning_main( int argc,
           char ** argv )
 {
     bool status = false;

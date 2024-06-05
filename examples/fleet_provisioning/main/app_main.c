@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -38,7 +39,7 @@
 
 #include "esp_lcd_panel_vendor.h"
 
-int aws_iot_demo_main( int argc, char ** argv );
+int fleet_provisioning_main( int argc, char ** argv );
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -687,11 +688,6 @@ void app_main()
          */
         wifi_prov_mgr_endpoint_create("custom-data");
 
-        /* Do not stop and de-init provisioning even after success,
-         * so that we can restart it later. */
-#ifdef CONFIG_EXAMPLE_REPROVISIONING
-        wifi_prov_mgr_disable_auto_stop(1000);
-#endif
         /* Start provisioning service */
         ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(security, (const void *) sec_params, service_name, service_key));
 
@@ -728,40 +724,58 @@ void app_main()
     xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_EVENT, true, true, portMAX_DELAY);
 
     /* Start main application now */
-#if CONFIG_EXAMPLE_REPROVISIONING
-    while (1) {
-        for (int i = 0; i < 10; i++) {
-            ESP_LOGI(TAG, "Hello World!");
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
 
-        /* Resetting provisioning state machine to enable re-provisioning */
-        wifi_prov_mgr_reset_sm_state_for_reprovision();
-
-        /* Wait for Wi-Fi connection */
-        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_EVENT, true, true, portMAX_DELAY);
-    }
-#else
     ESP_LOGI(TAG, "Successful Wi-Fi provisioning!");
     // Lock the mutex due to the LVGL APIs are not thread-safe
     if (lvgl_port_lock(0)) {
         lv_obj_t *screen = lv_scr_act();
         lv_obj_clean(screen); // Clear the screen to ensure it's dark
         lv_obj_t *label = lv_label_create(screen);
-        lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
         lv_label_set_text(label, "Wi-Fi connected successfully!");
-        lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_width(label, disp->driver->hor_res);
         // Release the mutex
         lvgl_port_unlock();
     }
 
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    filesystem_init();
+
     // Start Fleet Provisioning
     ESP_LOGI(TAG, "Start Fleet Provisioning...");
-    aws_iot_demo_main(0,NULL);
+    if (lvgl_port_lock(0)) {
+        lv_obj_t *screen = lv_scr_act();
+        lv_obj_clean(screen); // Clear the screen to ensure it's dark
+        lv_obj_t *label = lv_label_create(screen);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+        lv_label_set_text(label, "Start Fleet Provisioning...");
+        lv_obj_set_width(label, disp->driver->hor_res);
+        // Release the mutex
+        lvgl_port_unlock();
+    }
+
+    ESP_LOGI(TAG, "[APP] Free memory: %"PRIu32" bytes", esp_get_free_heap_size());
+    int fleet_prov_status = fleet_provisioning_main(0,NULL);
+
+    if (lvgl_port_lock(0)) {
+        lv_obj_t *screen = lv_scr_act();
+        lv_obj_clean(screen); // Clear the screen to ensure it's dark
+        lv_obj_t *label = lv_label_create(screen);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+        if (fleet_prov_status == EXIT_SUCCESS) {
+            lv_label_set_text(label, "Fleet Provisioning executed succesfully!");
+        }
+        else {
+            lv_label_set_text(label, "Fleet Provisioning failed!");
+        }
+        lv_obj_set_width(label, disp->driver->hor_res);
+        // Release the mutex
+        lvgl_port_unlock();
+    }
 
     vTaskDelay(pdMS_TO_TICKS(10 * 1000));
 
     filesystem_deinit();
-#endif
 
 }
