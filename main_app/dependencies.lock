@@ -1,10 +1,4 @@
 dependencies:
-  espressif/esp_lcd_sh1107:
-    component_hash: 9cc00a4d066e3e1d120fd2006d30612766488379b820804092a9bfedb3c1f93c
-    source:
-      storage_url: file:///C:/Espressif/registry
-      type: service
-    version: 1.1.0
   espressif/esp_lvgl_port:
     component_hash: b43dc04720d126cbfe14d53a84787e4c24b7bd7f15468e224c930ad3ffb32258
     source:
@@ -28,6 +22,6 @@ dependencies:
       storage_url: file:///C:/Espressif/registry
       type: service
     version: 8.3.11
-manifest_hash: 99c54f8f8d1587ea7cf336eba24a399fb8ba3dee7d8d26496410c1e3c8088562
+manifest_hash: 55c50a1a70864baf1f042d01840988285a44a6beed47cfac0e598de30ab86332
 target: esp32c3
 version: 1.0.0

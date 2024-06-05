@@ -24,3 +24,7 @@
 
 - Install Grafana to EC2 AWS:
 	https://www.youtube.com/watch?v=qQKwywjSAgw
+
+
+--> increased memory usage in LVGL (sdkconfig) from 32 to 64
+--> decreased number of the memory buffer (sdkconfig) from 16 to 8

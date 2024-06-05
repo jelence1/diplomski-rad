@@ -1,0 +1,32 @@
+dependencies:
+  espressif/cbor:
+    component_hash: 440f4ee4504841cc9b4f3a8ef755776a612ac9dace355514c68b999868f990ff
+    source:
+      type: service
+    version: 0.6.0~1
+  espressif/esp_lvgl_port:
+    component_hash: b43dc04720d126cbfe14d53a84787e4c24b7bd7f15468e224c930ad3ffb32258
+    source:
+      storage_url: file:///C:/Espressif/registry
+      type: service
+    version: 1.4.0
+  espressif/qrcode:
+    component_hash: 3b493771bc5d6ad30cbf87c25bf784aada8a08c941504355b55d6b75518ed7bc
+    source:
+      storage_url: file:///C:/Espressif/registry
+      type: service
+    version: 0.1.0~2
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.2.1
+  lvgl/lvgl:
+    component_hash: 948bff879a345149b83065535bbc4a026ce9f47498a22881e432a264b9098015
+    source:
+      storage_url: file:///C:/Espressif/registry
+      type: service
+    version: 8.3.11
+manifest_hash: 43e41df3857e5a75f4389bcf1fd16dbb534e89ef008609c3081c1aaccfa3247a
+target: esp32c3
+version: 1.0.0

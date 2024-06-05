@@ -1,0 +1,9 @@
+## IDF Component Manager Manifest File
+dependencies:
+  espressif/cbor:
+    version: ">=0.5.4,<1.0.0"
+    rules:
+      - if: "idf_version >=5.0"
+  qrcode: "^0.1.0"
+  lvgl/lvgl: "~8.3.0"
+  esp_lvgl_port: "^1"
