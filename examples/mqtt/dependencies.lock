@@ -1,0 +1,15 @@
+dependencies:
+  espressif/esp_secure_cert_mgr:
+    component_hash: a20007d67e65a000670ab77e45d7554c943eb8dcb0abeada0a57dd9adac3a703
+    source:
+      storage_url: file:///C:/Espressif/registry
+      type: service
+    version: 2.4.1
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.2.1
+manifest_hash: b5c4be36ceb2c84383c8df8d92f1ba29c7b8f677e8b1f5782216851173f42c4e
+target: esp32
+version: 1.0.0

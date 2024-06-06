@@ -1,6 +1,6 @@
 set(COMPONENT_SRCS
 	"app_main.c"
-	"fleet_provisioning_with_csr_demo.c"
+	"fleet_provisioning_with_csr.c"
 	"mqtt_operations.c"
 	"fleet_provisioning_serializer.c"
 	"pkcs11_operations.c"

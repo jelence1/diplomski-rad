@@ -39,7 +39,12 @@
 
 #include "esp_lcd_panel_vendor.h"
 
-int fleet_provisioning_main( int argc, char ** argv );
+/* corePKCS11 includes. */
+#include "core_pkcs11.h"
+#include "core_pkcs11_config.h"
+#include "pkcs11_operations.h"
+
+int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -756,7 +761,20 @@ void app_main()
     }
 
     ESP_LOGI(TAG, "[APP] Free memory: %"PRIu32" bytes", esp_get_free_heap_size());
-    int fleet_prov_status = fleet_provisioning_main(0,NULL);
+
+    int fleet_prov_status;
+    CK_SESSION_HANDLE p11Session;
+
+    /* Initialize the PKCS #11 module */
+    CK_RV pkcs11ret = xInitializePkcs11Session( &p11Session );
+
+    if( pkcs11ret != CKR_OK ) {
+        LogError( ( "Failed to initialize PKCS #11." ) );
+        fleet_prov_status = false;
+    }
+    else {
+        fleet_prov_status = fleet_provisioning_main(&p11Session);
+    }
 
     if (lvgl_port_lock(0)) {
         lv_obj_t *screen = lv_scr_act();
@@ -767,15 +785,19 @@ void app_main()
             lv_label_set_text(label, "Fleet Provisioning executed succesfully!");
         }
         else {
-            lv_label_set_text(label, "Fleet Provisioning failed!");
+            lv_label_set_text(label, "Fleet Provisioning failed. Exiting code.");
         }
         lv_obj_set_width(label, disp->driver->hor_res);
         // Release the mutex
         lvgl_port_unlock();
     }
 
-    vTaskDelay(pdMS_TO_TICKS(10 * 1000));
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     filesystem_deinit();
+
+    pkcs11CloseSession( p11Session );
+
+    if (fleet_prov_status == EXIT_FAILURE) return;
 
 }

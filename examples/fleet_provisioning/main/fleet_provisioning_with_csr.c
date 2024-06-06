@@ -463,8 +463,7 @@ static bool unsubscribeFromRegisterThingResponseTopics( void )
  * the Fleet Provisioning library to generate and validate AWS IoT Fleet
  * Provisioning MQTT topics, and use the coreMQTT library to communicate with
  * the AWS IoT Fleet Provisioning APIs. */
-int fleet_provisioning_main( int argc,
-          char ** argv )
+int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
 {
     bool status = false;
     /* Buffer for holding the CSR. */
@@ -480,13 +479,9 @@ int fleet_provisioning_main( int argc,
     char ownershipToken[ OWNERSHIP_TOKEN_BUFFER_LENGTH ];
     size_t ownershipTokenLength;
     bool connectionEstablished = false;
-    CK_SESSION_HANDLE p11Session;
+    
     int demoRunCount = 0;
     CK_RV pkcs11ret = CKR_OK;
-
-    /* Silence compiler warnings about unused variables. */
-    ( void ) argc;
-    ( void ) argv;
 
     do
     {
@@ -495,28 +490,19 @@ int fleet_provisioning_main( int argc,
         certificateIdLength = CERT_ID_BUFFER_LENGTH;
         ownershipTokenLength = OWNERSHIP_TOKEN_BUFFER_LENGTH;
 
-        /* Initialize the PKCS #11 module */
-        pkcs11ret = xInitializePkcs11Session( &p11Session );
 
-        if( pkcs11ret != CKR_OK )
-        {
-            LogError( ( "Failed to initialize PKCS #11." ) );
-            status = false;
-        }
-        else
-        {
-            /* Insert the claim credentials into the PKCS #11 module */
-            status = loadClaimCredentials( p11Session,
-                                           CLAIM_CERT_PATH,
-                                           pkcs11configLABEL_CLAIM_CERTIFICATE,
-                                           CLAIM_PRIVATE_KEY_PATH,
-                                           pkcs11configLABEL_CLAIM_PRIVATE_KEY );
+        /* Insert the claim credentials into the PKCS #11 module */
+        status = loadClaimCredentials( *p11Session,
+                                        CLAIM_CERT_PATH,
+                                        pkcs11configLABEL_CLAIM_CERTIFICATE,
+                                        CLAIM_PRIVATE_KEY_PATH,
+                                        pkcs11configLABEL_CLAIM_PRIVATE_KEY );
 
-            if( status == false )
-            {
-                LogError( ( "Failed to provision PKCS #11 with claim credentials." ) );
-            }
+        if( status == false )
+        {
+            LogError( ( "Failed to provision PKCS #11 with claim credentials." ) );
         }
+        
 
         /**** Connect to AWS IoT Core with provisioning claim credentials *****/
 
@@ -532,7 +518,7 @@ int fleet_provisioning_main( int argc,
              * exponentially increase until maximum attempts are reached. */
             LogInfo( ( "Establishing MQTT session with claim certificate..." ) );
             status = EstablishMqttSession( provisioningPublishCallback,
-                                           p11Session,
+                                           *p11Session,
                                            pkcs11configLABEL_CLAIM_CERTIFICATE,
                                            pkcs11configLABEL_CLAIM_PRIVATE_KEY );
 
@@ -563,7 +549,7 @@ int fleet_provisioning_main( int argc,
         if( status == true )
         {
             /* Create a new key and CSR. */
-            status = generateKeyAndCsr( p11Session,
+            status = generateKeyAndCsr( *p11Session,
                                         pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS,
                                         pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS,
                                         csr,
@@ -626,7 +612,7 @@ int fleet_provisioning_main( int argc,
         if( status == true )
         {
             /* Save the certificate into PKCS #11. */
-            status = loadCertificate( p11Session,
+            status = loadCertificate( *p11Session,
                                       certificate,
                                       pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS,
                                       certificateLength );
@@ -722,7 +708,7 @@ int fleet_provisioning_main( int argc,
         {
             LogInfo( ( "Establishing MQTT session with provisioned certificate..." ) );
             status = EstablishMqttSession( provisioningPublishCallback,
-                                           p11Session,
+                                           *p11Session,
                                            pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS,
                                            pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS );
 
@@ -749,8 +735,6 @@ int fleet_provisioning_main( int argc,
             connectionEstablished = false;
         }
 
-        pkcs11CloseSession( p11Session );
-
         /**** Retry in case of failure ****************************************/
 
         /* Increment the demo run count. */
@@ -758,27 +742,21 @@ int fleet_provisioning_main( int argc,
 
         if( status == true )
         {
-            LogInfo( ( "Demo iteration %d is successful.", demoRunCount ) );
+            LogInfo( ( "Iteration %d is successful.", demoRunCount ) );
         }
         /* Attempt to retry a failed iteration of demo for up to #FLEET_PROV_MAX_DEMO_LOOP_COUNT times. */
         else if( demoRunCount < FLEET_PROV_MAX_DEMO_LOOP_COUNT )
         {
-            LogWarn( ( "Demo iteration %d failed. Retrying...", demoRunCount ) );
+            LogWarn( ( "Iteration %d failed. Retrying...", demoRunCount ) );
             sleep( DELAY_BETWEEN_DEMO_RETRY_ITERATIONS_SECONDS );
         }
         /* Failed all #FLEET_PROV_MAX_DEMO_LOOP_COUNT demo iterations. */
         else
         {
-            LogError( ( "All %d demo iterations failed.", FLEET_PROV_MAX_DEMO_LOOP_COUNT ) );
+            LogError( ( "All %d iterations failed.", FLEET_PROV_MAX_DEMO_LOOP_COUNT ) );
             break;
         }
     } while( status != true );
-
-    /* Log demo success. */
-    if( status == true )
-    {
-        LogInfo( ( "Demo completed successfully." ) );
-    }
 
     return ( status == true ) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
