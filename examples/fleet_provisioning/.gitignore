@@ -1,5 +1,5 @@
 build/
 .vscode/
 .devcontainer/
-spiffs_image/certs/claim_cert.cert
-spiffs_image/certs/claim_private.key
+main/spiffs_image/certs/claim_cert.cert
+main/spiffs_image/certs/claim_private.key
