@@ -54,6 +54,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <time.h>
+
+#include <sys/time.h>
 
 /* POSIX includes. */
 #include <unistd.h>
@@ -93,11 +96,8 @@
     #error "Please define a serial number (DEVICE_SERIAL_NUMBER) in demo_config.h."
 #endif
 
-//#define MQTT_EXAMPLE_TOPIC                  CLIENT_IDENTIFIER "/example/topic"
-#define MQTT_EXAMPLE_TOPIC                  "/example/topic"
-#define MQTT_EXAMPLE_TOPIC_LENGTH           ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_TOPIC ) - 1 ) )
-#define MQTT_EXAMPLE_MESSAGE                "Hello World!"
-#define MQTT_EXAMPLE_MESSAGE_LENGTH         ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_MESSAGE ) - 1 ) )
+#define MQTT_DATA_TOPIC                  "device/" CLIENT_IDENTIFIER "/data"
+#define MQTT_DATA_TOPIC_LENGTH           ( ( uint16_t ) ( sizeof( MQTT_DATA_TOPIC ) - 1 ) )
 
 /**
  * @brief The length of #PROVISIONING_TEMPLATE_NAME.
@@ -467,14 +467,37 @@ static bool unsubscribeFromRegisterThingResponseTopics( void )
 }
 /*-----------------------------------------------------------*/
 
-void prepareJSONMessage(float temperature, float humidity, float moisture, uint8_t *buffer, size_t *length) {
-    // Create a JSON object
-    cJSON *jsonObject = cJSON_CreateObject();
+static long generateId() {
+    srand(time(NULL));
+    long randomId = rand();
+    return randomId;
+}
+/*-----------------------------------------------------------*/
 
-    // Add the temperature, humidity, and moisture to the JSON object
-    cJSON_AddNumberToObject(jsonObject, "temperature", temperature);
-    cJSON_AddNumberToObject(jsonObject, "humidity", humidity);
-    cJSON_AddNumberToObject(jsonObject, "moisture", moisture);
+void prepareJSONMessage(float temperature, float humidity, float moisture, uint8_t *buffer, size_t *length) {
+    // Create the main JSON object
+    cJSON *jsonObject = cJSON_CreateObject();
+    char deviceName[64];
+
+    // Add the "timestamp" field
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    cJSON_AddNumberToObject(jsonObject, "timestamp", now.tv_usec);
+
+    // Construct the device name
+    snprintf(deviceName, sizeof(deviceName), "ESP32Thing_%s", CLIENT_IDENTIFIER);
+
+    // Add the device name to the JSON object
+    cJSON_AddStringToObject(jsonObject, "device", deviceName);
+
+    // Create a nested JSON object for data
+    cJSON *dataObject = cJSON_CreateObject();
+    cJSON_AddNumberToObject(dataObject, "temperature", temperature);
+    cJSON_AddNumberToObject(dataObject, "humidity", humidity);
+    cJSON_AddNumberToObject(dataObject, "moisture", moisture);
+
+    // Add the data object to the main JSON object
+    cJSON_AddItemToObject(jsonObject, "data", dataObject);
 
     // Print the JSON object to a string
     char *jsonString = cJSON_PrintUnformatted(jsonObject);
@@ -489,24 +512,21 @@ void prepareJSONMessage(float temperature, float humidity, float moisture, uint8
 }
 /*-----------------------------------------------------------*/
 
-void sendMessage() {
-    /* Publish test message to topic. */
-    float temperature = 23.5;
-    float humidity = 60.2;
-    float moisture = 45.3;
+void sendMessage(float temperature, float humidity) {
+    float moisture = 0.0;
     prepareJSONMessage(temperature, humidity, moisture, payloadBuffer, &payloadLength);
     bool status = false;
 
-    status = PublishToTopic( MQTT_EXAMPLE_TOPIC,
-                    MQTT_EXAMPLE_TOPIC_LENGTH,
+    status = PublishToTopic( MQTT_DATA_TOPIC,
+                    MQTT_DATA_TOPIC_LENGTH,
                     ( char * ) payloadBuffer,
                     payloadLength );
 
     if( status == false )
     {
         LogError( ( "Failed to publish to topic: %.*s.",
-                    MQTT_EXAMPLE_TOPIC_LENGTH,
-                    MQTT_EXAMPLE_TOPIC ) );
+                    MQTT_DATA_TOPIC_LENGTH,
+                    MQTT_DATA_TOPIC ) );
     }
 
 }

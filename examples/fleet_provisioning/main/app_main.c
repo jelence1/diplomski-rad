@@ -44,11 +44,13 @@
 #include "core_pkcs11_config.h"
 #include "pkcs11_operations.h"
 
+#include "dht.h"
+#include "esp_idf_lib_helpers.h"
+
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
-void sendMessage();
+void sendMessage(float temperature, float humidity);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
-
 
 #ifdef CONFIG_EXAMPLE_PROV_TRANSPORT_BLE
 #include <wifi_provisioning/scheme_ble.h>
@@ -150,6 +152,9 @@ static EventGroupHandle_t wifi_event_group;
 // Bit number used to represent command and parameter
 #define EXAMPLE_LCD_CMD_BITS           8
 #define EXAMPLE_LCD_PARAM_BITS         8
+
+#define DHT_PIN             GPIO_NUM_0
+#define SENSOR_TYPE         DHT_TYPE_DHT11
 
 /* Event handler for catching system events */
 static void event_handler(void* arg, esp_event_base_t event_base,
@@ -439,8 +444,29 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 }
 
 void publish_message_task(void *pvParameters) {
+    //lv_disp_t *disp = (lv_disp_t *)pvParameters;
+
+    float temperature, humidity; //TODO: add moisture
+    esp_err_t dht_temp;
+    char display_text[512];
+
     while (1) {
-        sendMessage();
+        dht_temp = dht_read_float_data(SENSOR_TYPE, DHT_PIN, &humidity, &temperature) != ESP_OK;
+        if (dht_temp == ESP_OK) {
+            if (lvgl_port_lock(0)) {
+                lv_obj_t *screen = lv_scr_act();
+                lv_obj_clean(screen); // Clear the screen to ensure it's dark
+                lv_obj_t *label = lv_label_create(screen);
+                lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+                sprintf(display_text, "Temp: %.2f°C\nHumid: %.2f%%", temperature, humidity);
+                lv_label_set_text(label, display_text);
+                //lv_obj_set_width(label, disp->driver->hor_res);
+                // Release the mutex
+                lvgl_port_unlock();
+            }
+        sendMessage(temperature, humidity);
+
+        }
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
@@ -808,7 +834,7 @@ void app_main()
 
     xTaskCreate(publish_message_task,   // Task function
             "publish_message_task",     // Name of the task
-            2048,                       // Stack size for the task
+            4096,                       // Stack size for the task
             NULL,                       // Task input parameters
             5,                          // Task priority
             NULL);                      // Task handle

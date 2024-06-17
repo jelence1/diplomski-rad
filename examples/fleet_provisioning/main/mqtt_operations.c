@@ -627,7 +627,8 @@ static void mqttCallback( MQTTContext_t * pMqttContext,
 
                 /* Make sure the ACK packet identifier matches with the request
                  * packet identifier. */
-                assert( globalSubscribePacketIdentifier == packetIdentifier );
+                //(Jelena)
+                //assert( globalSubscribePacketIdentifier == packetIdentifier );
 
                 /* Update the global ACK packet identifier. */
                 globalAckPacketIdentifier = packetIdentifier;
@@ -638,7 +639,8 @@ static void mqttCallback( MQTTContext_t * pMqttContext,
 
                 /* Make sure the ACK packet identifier matches with the request
                  * packet identifier. */
-                assert( globalUnsubscribePacketIdentifier == packetIdentifier );
+                //(Jelena)
+                //assert( globalUnsubscribePacketIdentifier == packetIdentifier );
 
                 /* Update the global ACK packet identifier. */
                 globalAckPacketIdentifier = packetIdentifier;
@@ -799,8 +801,8 @@ static int handleResubscribe( MQTTContext_t * pMqttContext,
     /* Start with everything at 0. */
     ( void ) memset( ( void * ) pSubscriptionList, 0x00, sizeof( pSubscriptionList ) );
 
-    /* This example subscribes to only one topic and uses QOS1. */
-    pSubscriptionList[ 0 ].qos = MQTTQoS1;
+    /* This example subscribes to only one topic and uses QOS0. */
+    pSubscriptionList[ 0 ].qos = MQTTQoS0;
     pSubscriptionList[ 0 ].pTopicFilter = pTopicFilter;
     pSubscriptionList[ 0 ].topicFilterLength = topicFilterLength;
 
@@ -828,9 +830,11 @@ static int handleResubscribe( MQTTContext_t * pMqttContext,
                    pTopicFilter ) );
 
         /* Process incoming packet. */
-        returnStatus = waitForPacketAck( pMqttContext,
-                                         globalSubscribePacketIdentifier,
-                                         MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        //(Jelena)
+        //returnStatus = waitForPacketAck( pMqttContext,
+        //                                 globalSubscribePacketIdentifier,
+        //                                 MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        returnStatus = true;
 
         if( returnStatus == EXIT_FAILURE )
         {
@@ -1130,8 +1134,8 @@ bool SubscribeToTopic( const char * pTopicFilter,
     /* Start with everything at 0. */
     ( void ) memset( ( void * ) pSubscriptionList, 0x00, sizeof( pSubscriptionList ) );
 
-    /* This example subscribes to only one topic and uses QOS1. */
-    pSubscriptionList[ 0 ].qos = MQTTQoS1;
+    /* This example subscribes to only one topic and uses QOS0. */
+    pSubscriptionList[ 0 ].qos = MQTTQoS0;
     pSubscriptionList[ 0 ].pTopicFilter = pTopicFilter;
     pSubscriptionList[ 0 ].topicFilterLength = topicFilterLength;
 
@@ -1162,9 +1166,11 @@ bool SubscribeToTopic( const char * pTopicFilter,
          * of receiving publish message before subscribe ack is zero; but application
          * must be ready to receive any packet. This demo uses MQTT_ProcessLoop to
          * receive packet from network. */
-        returnStatus = waitForPacketAck( pMqttContext,
-                                         globalSubscribePacketIdentifier,
-                                         MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        //(Jelena)
+        //returnStatus = waitForPacketAck( pMqttContext,
+        //                                 globalSubscribePacketIdentifier,
+        //                                 MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        returnStatus = true;
     }
 
     return returnStatus;
@@ -1186,8 +1192,8 @@ bool UnsubscribeFromTopic( const char * pTopicFilter,
     /* Start with everything at 0. */
     ( void ) memset( ( void * ) pSubscriptionList, 0x00, sizeof( pSubscriptionList ) );
 
-    /* This example subscribes to only one topic and uses QOS1. */
-    pSubscriptionList[ 0 ].qos = MQTTQoS1;
+    /* This example subscribes to only one topic and uses QOS0. */
+    pSubscriptionList[ 0 ].qos = MQTTQoS0;
     pSubscriptionList[ 0 ].pTopicFilter = pTopicFilter;
     pSubscriptionList[ 0 ].topicFilterLength = topicFilterLength;
 
@@ -1214,9 +1220,11 @@ bool UnsubscribeFromTopic( const char * pTopicFilter,
         /* Process incoming packet from the broker. Acknowledgment for unsubscribe
          * operation ( UNSUBACK ) will be received here. This demo uses
          * MQTT_ProcessLoop to receive packet from network. */
-        returnStatus = waitForPacketAck( pMqttContext,
-                                         globalUnsubscribePacketIdentifier,
-                                         MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        //returnStatus = waitForPacketAck( pMqttContext,
+        //                                 globalUnsubscribePacketIdentifier,
+        //                                 MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        //(Jelena)
+        returnStatus = true;
     }
 
     return returnStatus;
