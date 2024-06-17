@@ -24,6 +24,7 @@
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{lightblue}{rgb}{0.7,0.99,0.99}
+\definecolor{darkblue}{rgb}{0.08,0.41,0.69}
 
 \lstdefinestyle{mystyle}{
 	frame=single,   
@@ -42,6 +43,18 @@
 }
 
 \lstset{style=mystyle}
+
+\lstdefinelanguage{json}{
+	breaklines=true,
+	frame=single,
+	literate=
+	*{:}{{{\color{magenta}{:}}}}{1}
+	{,}{{{\color{magenta}{,}}}}{1}
+	{\{}{{{\color{darkblue}{\{}}}}{1}
+	{\}}{{{\color{darkblue}{\}}}}}{1}
+	{[}{{{\color{darkblue}{[}}}}{1}
+	{]}{{{\color{darkblue}{]}}}}{1},
+}
 
 \renewcommand*{\lstlistingname}{Isječak koda}
 \renewcommand*\lstlistlistingname{Popis isječaka koda}
@@ -72,7 +85,7 @@
 \listoffigures
 \addcontentsline{toc}{chapter}{\lstlistlistingname}
 \lstlistoflistings
-\listoftables
+%\listoftables
 \endgroup
 
 \include{Uvod}

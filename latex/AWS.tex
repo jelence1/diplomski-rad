@@ -1,16 +1,21 @@
 \chapter{Amazon Web Services (AWS)}
 
-Amazon usluge za web \engl{Amazon Web Services - AWS} sveobuhvatna je platforma za računarstvo u oblaku koju pruža Amazon te sadrži brojne usluge u oblaku, uključujući infrastrukturu \engl{Infrastructure as a Service - IaaS}, platformu \engl{Platform as a Service - PaaS} i softver \engl{Software as a Service - SaaS}. AWS usluge nude organizacijske alate kao što su računalna snaga, baza podataka i usluge isporuke sadržaja \cite{what_is_aws}. 
+Amazon usluge za web \engl{Amazon Web Services - AWS} sveobuhvatna je platforma za računarstvo u oblaku koju pruža tvrtka Amazon te sadrži brojne usluge u oblaku, uključujući infrastrukturu \engl{Infrastructure as a Service - IaaS}, platformu \engl{Platform as a Service - PaaS} i softver \engl{Software as a Service - SaaS}. AWS usluge nude organizacijske alate kao što su računalna snaga, baza podataka i usluge isporuke sadržaja \cite{what_is_aws}. 
 
-AWS je podijeljen u više različitih usluga koje se mogu pojedinačno konfigurirati na temelju korisnikovih potreba. Neke od usluga koje nudi AWS su: pohrana, baze podataka, migracija, povezivanje, monitoriranje, sigurnost, analitika, umjetna inteligencija te razvoj mobilnih aplikacija. 
+AWS je podijeljen u više različitih usluga koje se mogu pojedinačno konfigurirati na temelju korisničkih potreba. Neke od usluga koje nudi AWS su: pohrana, baze podataka, monitoriranje, sigurnost, analitika, umjetna inteligencija te razvoj mobilnih aplikacija. 
 
-AWS pruža usluge iz mnogo podatkovnih centara \engl{data center - DC} koji su raspodijeljeni po zonama dostupnosti \engl{availability zone - AZ} diljem regija cijelog svijeta. Jedna regija obuhvaća nekoliko fizički bliskih zona povezanih mrežom niske latencije. 
+AWS pruža usluge iz mnogo podatkovnih centara \engl{data center - DC} koji su raspodijeljeni po zonama dostupnosti \engl{availability zone - AZ} diljem regija cijelog svijeta. Jedna regija obuhvaća nekoliko fizički bliskih zona povezanih mrežom niske latencije. Geografskom raspodijeljenošću AWS pruža višestruke prednosti \cite{aws_regions}:
+\begin{enumerate}
+	\item niska latencija: budući da su regije skupovi fizičkih mrežno povezanih bliskih zona, korisnički podaci i aplikacije mogu biti smješteni bliže krajnjim korisnicima što poboljšava performanse aplikacija,
+	\item visoka dostupnost: u slučaju kvara podatkovnog centra, korištenjem više zona dostupnosti unutar regije podaci mogu i dalje ostati dostupni,
+	\item otpornost i oporavak od katastrofe: podaci i aplikacije mogu se replicirati između više zona ili regija, što omogućava brzi oporavak u slučaju prirodnih katastrofa, tehničkih problema ili napada,
+	\item skalabilnost: klijenti mogu dinamički povećavati ili smanjivati resurse u različitim regijama ovisno o potražnji,
+	\item poboljšana sigurnost: fizički odvojeni podatkovni centri smanjuju rizik od pojedinačnih točaka neuspjeha i omogućavaju implementaciju složenijih sigurnosnih strategija.
+\end{enumerate}
 
 Također, nude se brojne mogućnosti za razvojne inženjere u sklopu AWS-a. Nudi alate naredbenog retka \engl{command-line tools} i pakete za razvoj programa \engl{Software Development Kit - SDK} za puštanje aplikacija u produkciju \engl{deployment} i upravljanje vlastitim uslugama i aplikacijama. Paketi za razvoj programa dostupni su u raznim programskim jezicima, uključujući programske jezike C++, Android, iOS, Java, Node.js, Python i Ruby.
- 
-\section{Usluge AWS-a za IoT sustave}
 
-AWS isto tako nudi brojne usluge za razvoj IoT sustava. Usluga AWS-a za IoT pruža platformu za upravljanje IoT uređajima te obradu podataka i njihovu pohranu na druge AWS usluge, poput baze podataka. AWS IoT pruža usluge u oblaku koje povezuju IoT uređaje s drugim uređajima i uslugama AWS-a u oblaku. Također pruža software za uređaje, poput paketa za razvoj programa, za jednostavniju integraciju s uslugama AWS-a za IoT. Na slici \ref{fig:aws_iot_arch} nalazi se prikaz arhitekture usluga koje AWS nudi za razvoj IoT sustava.
+AWS isto tako nudi brojne usluge za razvoj IoT sustava. Usluga AWS-a za IoT pruža platformu za upravljanje IoT uređajima te obradu podataka i njihovu pohranu na druge AWS usluge, poput baze podataka. AWS IoT pruža usluge u oblaku koje povezuju IoT uređaje s drugim uređajima i uslugama AWS-a u oblaku. Također pruža softver za uređaje, poput paketa za razvoj programa, za jednostavniju integraciju s uslugama AWS-a za IoT. Na slici \ref{fig:aws_iot_arch} nalazi se prikaz arhitekture usluga koje AWS nudi za razvoj IoT sustava.
 
 \begin{figure}[ht]
 	\centering
@@ -19,7 +24,7 @@ AWS isto tako nudi brojne usluge za razvoj IoT sustava. Usluga AWS-a za IoT pru�
 	\label{fig:aws_iot_arch}
 \end{figure}
 
-AWS IoT podržava sljedeće komunikacijske protokole:
+AWS podržava sljedeće komunikacijske protokole za IoT sustave:
 \begin{itemize}
 	\item MQTT \engl{Message Queuing Telemetry Transport},
 	\item HTTPS,
@@ -27,11 +32,13 @@ AWS IoT podržava sljedeće komunikacijske protokole:
 	\item TLS.
 \end{itemize}
 
-U nastavku su opisane usluge za razvoj IoT sustava u sklopu AWS-a.
+U nastavku su opisane usluge koje nudi AWS za razvoj IoT sustava.
 
 \section{AWS IoT Core}
 
-AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan \engl{lightweight} protokol za prijenos poruka temeljen na objavi/pretplati sustavu, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Na slici \ref{fig:aws_iot_core_overview} nalazi se pregled rada usluge AWS IoT Core.
+AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan \engl{lightweight} protokol za prijenos poruka temeljen na objavi/pretplati sustavu u kojoj glavnu ulogu ima broker kao posrednik, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Komponenta također ima ugrađenu podršku za upravljanje MQTT brokerom koji podržava trajne, uvijek uključene veze, napredna pravila zadržavanja poruka te obrađuje više uređaja i tema istovremeno. Isto tako, AWS IoT Core podržava najnoviji standard MQTT 5 i kompatibilan je sa prethodnim standardom MQTT 3, što omogućuje učinkovito upravljanje heterogenim implementacijama s mnoštvom specifikacija. Nadalje, komponenta omogućava višestruke metode provjere autentičnosti i pristupne politike za zaštitu rješenja od ranjivosti. Štoviše, koristeći pomoć drugih usluga u sklopu platforme kao što je AWS IoT Core Device Advisor, moguće je pristupiti unaprijed izgrađenim paketima testova za provjeru MQTT funkcionalnosti uređaja tijekom faze razvoja.
+
+Na slici \ref{fig:aws_iot_core_overview} nalazi se pregled rada usluge AWS IoT Core.
 
 \begin{figure}[ht]
 	\centering
@@ -40,7 +47,7 @@ AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. 
 	\label{fig:aws_iot_core_overview}
 \end{figure}
 
-AWS IoT Core pruža usluge koje povezuju oblak AWS-a s IoT uređajima kako bi se ostale usluge u oblaku i aplikacije mogle međusobno komunicirati s tim uređajima. Na slici \ref{fig:aws_iot_core_components} nalaze se svi segmenti usluge AWS IoT Core te kako oni komuniciraju s vanjskim dijelovima. Zelenom bojom označena je sama usluga, narančastom bojom fizički uređaji, odnosno stvari (engl. \textit{Things}), sivom bojom druge IoT aplikacije unutar AWS-a, dok su plavom bojom označene ostale usluge koje se nude u ekosustavu AWS.
+AWS IoT Core pruža usluge koje povezuju oblak AWS-a s IoT uređajima kako bi se ostale usluge u oblaku i aplikacije mogle međusobno komunicirati s tim uređajima. Na slici \ref{fig:aws_iot_core_components} nalaze se svi segmenti usluge AWS IoT Core te kako oni komuniciraju s vanjskim dijelovima. Zelenom bojom označena je sama usluga, narančastom bojom fizički uređaji odnosno stvari (engl. \textit{Things}), sivom bojom druge IoT aplikacije unutar AWS-a koje se mogu izravno spojiti na sustave u AWS-u, dok su plavom bojom označene ostale usluge odnosno sustavi koji se nalaze u ekosustavu AWS.
 
 \begin{figure}[ht]
 	\centering
@@ -49,7 +56,7 @@ AWS IoT Core pruža usluge koje povezuju oblak AWS-a s IoT uređajima kako bi se
 	\label{fig:aws_iot_core_components}
 \end{figure}
 
-U nastavku su navedene ključne usluge koje pokriva AWS IoT Core.
+U nastavku su ukratko opisane ključne usluge koje pokriva AWS IoT Core \cite{aws_docs}.
 
 \subsubsection{Usluge za slanje poruka}
 
@@ -57,25 +64,23 @@ AWS IoT Core usluge za povezivanje pružaju sigurnu komunikaciju s IoT uređajim
 
 Prilazni uređaj omogućuje uređajima sigurnu i efikasnu komunikaciju sa sustavom AWS. Komunikacija je osigurana sigurnosnim protokolima koji koriste  X.509 certifikate. 
 
-Broker za poruke pruža mehanizam uređajima i aplikacijama slanje i primanje poruka. Moguće je koristiti protokol MQTT ili direktno WebSocket za objavu i pretplatu na teme. Uređaji i klijenti koriste HTTP REST sučelje za objavu poruka brokeru. Broker zatim distribuira podatke na uređaje koji su se pretplatili na određene teme kao i na druge AWS aplikacije te usluge koje prate teme na brokeru.
+Broker za poruke pruža mehanizam uređajima i aplikacijama slanje i primanje poruka. Moguće je koristiti protokol MQTT ili direktno \textit{WebSocket} za objavu i pretplatu na teme. Uređaji i klijenti koriste sučelje HTTP REST za objavu poruka brokeru. Broker zatim distribuira podatke na uređaje koji su se pretplatili na određene teme kao i na druge AWS aplikacije te usluge koje prate teme na brokeru.
 
 AWS IoT Core za protokol LoRaWAN omogućava postavljanje privatne LoRaWAN mreže tako što poveže LoRaWAN te prilazne uređaje na AWS bez potrebe za razvojem mrežnog servera za LoRaWAN \engl{LoRaWAN Network Server - LNS}. Poruke primljene od LoRaWAN uređaja šalju se na stroj za pravila \engl{rules engine} gdje se formatiraju i prosljeđuju ostalim AWS uslugama.
 
-Stroj za pravila povezuje podatke iz brokera s drugim AWS IoT uslugama za pohranu i dodatnu obradu. Primjerice, moguće je umetati ili pretraživati po podatkovnim tablicama ili pozvati određene definirane funkcije na temelju izraza definiranog u stroju. Isto tako, moguće je obraditi te podatke i proslijediti novostvoreni format poruka drugim uslugama ili bazama podataka.
+Stroj za pravila \engl{rules engine} povezuje podatke iz brokera s drugim AWS IoT uslugama za pohranu i dodatnu obradu. Primjerice, moguće je umetati ili pretraživati po podatkovnim tablicama ili pozvati određene definirane funkcije na temelju izraza definiranog u stroju. Isto tako, moguće je obraditi te podatke i proslijediti novostvoreni format poruka drugim uslugama ili bazama podataka.
 
 \subsubsection{Upravljačke usluge}
 
 Upravljačke usluge AWS IoT Core komponente pružaju sigurnost uređaja te značajke za upravljanje i registraciju novih uređaja.
 
-Moguće je definirati vlastite autorizatore radi upravljanja autentifikacijskim i autorizacijskim strategijama koristeći vlastiti servis za autentifikaciju i Lambda funkcije za računanje koje AWS nudi. 
+Moguće je definirati vlastite autorizatore radi upravljanja autentifikacijskim i autorizacijskim strategijama koristeći vlastiti servis za autentifikaciju i funkcije za računanje Lambda koje nudi AWS. Lambda je računalna usluga za slučajeve i aplikacije dinamičke skalabilnosti. Pokreće kod na infrastrukturi visoke dostupnosti i obavlja cjelokupnu administraciju računalnih resursa, uključujući održavanje poslužitelja i operativnog sustava, osiguravanje kapaciteta i automatsko skaliranje ovisno o trenutnim potrebama sustava. Lambda funkcije korisne su za obradu datoteka, tokova te HTTP zahtjeva. Funkcije su pogodne za obradu podataka prije preusmjeravanja na drugu funkciju ili pohranu. 
 
-Usluga za postavljanje \engl{provisioning} uređaja omogućava konfiguriranje i prijavu uređaja u AWS koristeći predložak koji opisuje resurse potrebne uređaju: \textit{stvar}, certifikat i nekoliko politika. \textit{Stvar} je unos u registar koji sadrži atribute opisa uređaja. Uređaji koriste certifikate za autentifikaciju s AWS IoT sustavom. Politike određuju koje operacije uređaj može izvršiti. 
+Usluga za registraciju uređaja u sustav \engl{provisioning} omogućava konfiguriranje i prijavu uređaja u AWS koristeći predložak koji opisuje resurse potrebne uređaju: stvar, certifikat i nekoliko politika. Stvar \engl{thing} je unos u registar koji sadrži atribute opisa uređaja. Uređaji koriste certifikate za autentifikaciju sa sustavom AWS. Politike određuju koje operacije uređaj može izvršiti. Svaka politika ima definirani dokument s izjavom koja se sastoji od učinka, akcije i resursa nad kojim se akcija izvršava. Učinak može biti \textit{Dopusti} ili \textit{Uskrati}, akcija se odnosi nad radnje s MQTT brokerom i poslovima, a resurs se odnosi na regiju i račun u kojem politika vrijedi. 
 
 Isto tako, moguće je definirati grupe za lakšu kategorizaciju i upravljanje uređajima. Grupe također mogu imati podgrupe, i tako graditi hijerarhiju grupa. Sve akcije izvršene na roditeljima propagiraju se do najdubljih podgrupa. Dozvole dodijeljene grupi primjenjuju se na sve uređaje u toj grupi i svim njihovim podgrupama. 
 
 Usluga za poslove \engl{jobs} omogućava definiranje udaljenih operacija koje se pošalju i izvrše na fizičkim uređajima spojenih u oblak. Posao se može odnositi preuzimanje i instalaciju aplikacija, ažuriranje sustava, ponovno pokretanje, obnova certifikata i slično.
-
-Registar organizira resurse pridružene uređajima u oblaku. Moguće je registrirati uređaje i pridružiti im maksimalno po tri atributa. Isto tako, uređajima se mogu pridružiti certifikati i klijentski ID za MQTT komunikaciju kako bi se olakšalo otklanjanje budućih grešaka.
 
 Usluga za sigurnost i identitet pruža dijeljenu odgovornost za sigurnost unutar AWS oblaka. Fizički uređaji moraju držati vjerodajnice na sigurnom kako bi se podaci mogli slati brokeru na siguran način. Značajke za sigurnost koriste i stroj za pravila kao i broker za poruke radi sigurnog prijenosa podataka drugim uslugama unutar AWS ekosustava.
 
@@ -87,15 +92,95 @@ Sjena uređaja \engl{Device Shadow} dokument je u JSON formatu koji se koristi z
 
 \subsection{AWS IoT Fleet Provisioning}
 
+Kao što je ranije navedeno, AWS nudi uslugu registracije uređaja u sustav čime uređaj dobiva pristup ostalim uslugama unutar platforme, poput povezivanja na MQTT broker. Moguće je dinamički registrirati više uređaja pomoću privremenih ili trajnih certifikata, što se naziva provizioniranje flote \engl{fleet provisioning}. Pomoću ove usluge AWS generira i sigurno dostavi certifikate te privatne ključeve na uređaje pri prvom povezivanju na platformu. AWS izdaje klijentske certifikate koji su potpisani certifikacijskim tijelom tvrtke Amazon \engl{Certificate Authority - CA} \cite{aws_docs}.
 
+Tri su ključna koraka pri omogućavanju registracije više uređaja u sustav:
+\begin{enumerate}
+	\item određivanje načina registracije,
+	\item definiranje upravljačke strukture nad uređajima,
+	\item kreiranje predloška za registraciju.
+\end{enumerate}
+
+Određivanje načina registracije u sustav povezano je s odabirom vrste certificiranja koja će se koristiti. Uređaji trebaju jedinstveni certifikat za povezivanje s platformom AWS i korištenje njenih usluga. Postoje tri metode certificiranja uređaja te odabir ovisi o mogućnostima proizvodnje uređaja i ovlastima samih korisnika:
+\begin{itemize}
+	\item registracija uređaja vlastitim jedinstvenim certifikatima, 
+	\item registracija od strane korisnika od povjerenja,
+	\item registracija certifikatom zahtjeva.  
+\end{itemize} 
+
+Registracija uređaja vlastitim jedinstvenim certifikatima podrazumijeva postojanje verificiranih certifikata na samom uređaju pri prvom povezivanju u sustav. Ovaj se način još naziva i pravodobno provizioniranje \engl{just-in-time provisioning}. Problem s ovim pristupom jest što instalacija certifikata nije uvijek moguća prije dostave uređaja korisniku. Isto tako, čak iako je instalacija certifikata moguća, nije uvijek moguće instalirati certifikate sigurno na uređaj, stoga je potrebno koristiti alternativne metode. 
+
+U slučaju kada rana certifikacija uređaja nije moguća, autorizirani ili krajnji korisnici \engl{trusted users} mogu uz pomoć aplikacije registrirati uređaje prije njihova spajanja na platformu. Ovdje je potrebno korisnicima pružiti aplikaciju kojom bi konfigurirali uređaj prilikom instalacije, te \textit{firmware} uređaja mora podržavati ovaj način registracije. 
+
+Treća opcija jest registracija pomoću certifikata zahtjeva \engl{claim certificate}. Certifikati zahtjeva privremeni su certifikati koji se mogu instalirati na više uređaja, te se pri prvoj registraciji u sustav zamijene s novim, jedinstvenim certifikatom. Ova metoda zahtijeva dodatne sigurnosne provjere zbog mogućnosti curenja privremenih certifikata zahtjeva jer više uređaja dijeli isti certifikat, no prijetnja se može ublažiti redovitim rotiranjem privremenih certifikata te kreiranjem više certifikata zahtjeva koji se mogu koristiti. Isto tako, privremenim certifikatima potrebno je dodijeliti minimalan skup dozvoljenih radnji potrebnih za registraciju uređaja. Dodatna sigurnosna provjera može se izvršiti i u obliku Lambda funkcije dodatnom provjerom primljenih parametara s uređaja.
+
+Upravljačka struktura nad uređajima je važna radi lakše organizacije uređaja u samom sustavu. Povezani uređaji predstavljeni su u platformi kao stvari tj. resursi koji se mogu organizirati i održavati. Osim ranije spomenutih stvari i grupa stvari, moguće je uređajima dodijeliti atribute po kojima se može pretraživati. Atributi se isto tako mogu dinamički dodijeliti na temelju podataka s uređaja prilikom njegove registracije. Oni se definiraju u predlošku za registraciju. 
+
+Predložak za registraciju dokument je u formatu JSON koji opisuje resurse, politike i dozvole koje je potrebno dodijeliti uređaju kada je registriran. Odjeljak \textit{parametri} u predlošku definira resurse u odjeljku \textit{resursi} koje uređaj mora koristiti pri interakciji s platformom. Svaki parametar definira naziv, vrstu i zadanu vrijednost koja nije obavezna. Zadana vrijednost koristi se kada rječnik proslijeđen s predloškom ne sadrži vrijednost za parametar. Odjeljak \textit{parametri} izgleda na sljedeći način:
+
+\begin{lstlisting}[caption={Odjeljak \textit{parametri} u predlošku za registraciju}, language=json]
+	{
+		"Parameters" : {
+			"ThingName" : {
+				"Type" : "String"
+			},
+			"SerialNumber" : {
+				"Type" : "String"
+			},
+			"Location" : {
+				"Type" : "String",
+				"Default" : "HR"
+			},
+			"CSR" : {
+				"Type" : "String"    
+			}
+		}
+	}
+\end{lstlisting}
+
+Odjeljak \textit{resursi} u predlošku definira resurse koji su potrebni uređaju za daljnji rad i komunikaciju sa sustavom: stvar, certifikat, jedna ili više politika. Svaki resurs specificira naziv, vrstu i skup svojstava. Vrsta resursa može biti jedna od tri vrijednosti: \lstinline|AWS::IoT::Thing|, \lstinline|AWS::IoT::Certificate|, te \lstinline|AWS::IoT::Policy|. Resursi tipa certifikat imaju posebna svojstva koja ih definiraju, ovisno o tome koja je metoda registracije uređaja odabrana. Politike su vezane za već postojeće politike u sustavu AWS. Odjeljak \textit{resursi} može izgledati na sljedeći način:
+
+\begin{lstlisting}[caption={Odjeljak \textit{resursi} u predlošku za registraciju}, language=json]
+{ 
+	"Resources" : {
+		"thing" : {
+			"Type" : "AWS::IoT::Thing",
+			"Properties" : {
+				"ThingName" : {"Ref" : "ThingName"},
+				"AttributePayload" : { "version" : "v1", "serialNumber" :  {"Ref" : "SerialNumber"}}, 
+				"ThingTypeName" :  "lightBulb-versionA",
+				"ThingGroups" : ["v1-lightbulbs", {"Ref" : "Location"}]
+			},
+			"OverrideSettings" : {
+				"AttributePayload" : "MERGE",
+				"ThingTypeName" : "REPLACE",
+				"ThingGroups" : "DO_NOTHING"
+			}
+		},  
+		"certificate" : {
+			"Type" : "AWS::IoT::Certificate",
+			"Properties" : {
+				"CertificateSigningRequest": {"Ref" : "CSR"},
+				"Status" : "ACTIVE"      
+			}
+		},
+		"policy" : {
+			"Type" : "AWS::IoT::Policy",
+			"Properties" : {
+				"PolicyDocument" : "{ \"Version\": \"2012-10-17\", \"Statement\": [{ \"Effect\": \"Allow\", \"Action\":[\"iot:Publish\"], \"Resource\": [\"arn:aws:iot:us-east-1:123456789012:topic/foo/bar\"] }] }"
+			}
+		}
+	}
+}
+\end{lstlisting}
+
+Valja napomenuti kako je moguće u korisničkom sučelju platforme odabrati sve parametre, te kreiranje vlastitog dokumenta u JSON formatu nije potrebno, nego se automatski generira iz korisničkog odabira u sučelju. 
+
+\subsection{AWS IoT Jobs}
 
 \subsection{AWS IoT OTA}
 
 \subsection{AWS IoT Device Shadow}
-
-\subsection{AWS IoT Jobs}
-
-\subsection{AWS IoT Device Defender}
 
 \subsection{Ostale dostupne IoT usluge u sustavu AWS}
 
@@ -109,7 +194,7 @@ AWS IoT Analytics automatizira korake potrebne za analizu podataka prikupljenih 
 
 \subsubsection{IoT Device Defender}
 
-AWS IoT Device Defender potpuna je usluga koja pomaže pri osiguranju IoT uređaja. Kontinuirano revidira IoT konfiguracije radi provjere jesu li sve u skladu s najboljim sigurnosnim praksama. Također pruža kontinuirano monitoriranje sigurnosnih metrika s uređaja i AWS IoT Core kako bi se detektirale anomalije u ponašanju pojedinih uređaja. 
+AWS IoT Device Defender potpuna je usluga koja pomaže pri osiguranju IoT uređaja. Kontinuirano revidira IoT konfiguracije radi provjere jesu li sve u skladu s najboljim sigurnosnim praksama. Također pruža kontinuirano monitoriranje sigurnosnih metrika s uređaja i usluge AWS IoT Core kako bi se detektirale anomalije u ponašanju pojedinih uređaja. 
 
 Ova usluga također omogućuje slanje alarma na konzolu AWS IoT sustava i na uslugu za monitoriranje Amazon CloudWatch. Koriste se ugrađene mitigacijske akcije kako bi se izolirali nesigurni uređaji.
 
