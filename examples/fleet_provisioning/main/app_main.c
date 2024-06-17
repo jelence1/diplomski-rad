@@ -45,6 +45,7 @@
 #include "pkcs11_operations.h"
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
+void sendMessage();
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -437,6 +438,13 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 
 }
 
+void publish_message_task(void *pvParameters) {
+    while (1) {
+        sendMessage();
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+}
+
 void app_main()
 {
     ESP_LOGI(TAG, "[APP] Startup..");
@@ -796,8 +804,15 @@ void app_main()
 
     filesystem_deinit();
 
-    pkcs11CloseSession( p11Session );
-
     if (fleet_prov_status == EXIT_FAILURE) return;
+
+    xTaskCreate(publish_message_task,   // Task function
+            "publish_message_task",     // Name of the task
+            2048,                       // Stack size for the task
+            NULL,                       // Task input parameters
+            5,                          // Task priority
+            NULL);                      // Task handle
+
+    //pkcs11CloseSession( p11Session );
 
 }

@@ -74,6 +74,8 @@
 #include "pkcs11_operations.h"
 #include "fleet_provisioning_serializer.h"
 
+#include "cJSON.h"
+
 /**
  * These configurations are required. Throw compilation error if it is not
  * defined.
@@ -90,6 +92,12 @@
 #ifndef DEVICE_SERIAL_NUMBER
     #error "Please define a serial number (DEVICE_SERIAL_NUMBER) in demo_config.h."
 #endif
+
+//#define MQTT_EXAMPLE_TOPIC                  CLIENT_IDENTIFIER "/example/topic"
+#define MQTT_EXAMPLE_TOPIC                  "/example/topic"
+#define MQTT_EXAMPLE_TOPIC_LENGTH           ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_TOPIC ) - 1 ) )
+#define MQTT_EXAMPLE_MESSAGE                "Hello World!"
+#define MQTT_EXAMPLE_MESSAGE_LENGTH         ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_MESSAGE ) - 1 ) )
 
 /**
  * @brief The length of #PROVISIONING_TEMPLATE_NAME.
@@ -459,6 +467,50 @@ static bool unsubscribeFromRegisterThingResponseTopics( void )
 }
 /*-----------------------------------------------------------*/
 
+void prepareJSONMessage(float temperature, float humidity, float moisture, uint8_t *buffer, size_t *length) {
+    // Create a JSON object
+    cJSON *jsonObject = cJSON_CreateObject();
+
+    // Add the temperature, humidity, and moisture to the JSON object
+    cJSON_AddNumberToObject(jsonObject, "temperature", temperature);
+    cJSON_AddNumberToObject(jsonObject, "humidity", humidity);
+    cJSON_AddNumberToObject(jsonObject, "moisture", moisture);
+
+    // Print the JSON object to a string
+    char *jsonString = cJSON_PrintUnformatted(jsonObject);
+
+    // Copy the JSON string to the buffer and set the length
+    *length = strlen(jsonString);
+    memcpy(buffer, jsonString, *length);
+
+    // Clean up
+    cJSON_Delete(jsonObject);
+    cJSON_free(jsonString); // Use cJSON_free to free the allocated string
+}
+/*-----------------------------------------------------------*/
+
+void sendMessage() {
+    /* Publish test message to topic. */
+    float temperature = 23.5;
+    float humidity = 60.2;
+    float moisture = 45.3;
+    prepareJSONMessage(temperature, humidity, moisture, payloadBuffer, &payloadLength);
+    bool status = false;
+
+    status = PublishToTopic( MQTT_EXAMPLE_TOPIC,
+                    MQTT_EXAMPLE_TOPIC_LENGTH,
+                    ( char * ) payloadBuffer,
+                    payloadLength );
+
+    if( status == false )
+    {
+        LogError( ( "Failed to publish to topic: %.*s.",
+                    MQTT_EXAMPLE_TOPIC_LENGTH,
+                    MQTT_EXAMPLE_TOPIC ) );
+    }
+
+}
+
 /* This example uses a single application task, which shows that how to use
  * the Fleet Provisioning library to generate and validate AWS IoT Fleet
  * Provisioning MQTT topics, and use the coreMQTT library to communicate with
@@ -723,6 +775,7 @@ int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
             {
                 LogInfo( ( "Sucessfully established connection with provisioned credentials." ) );
                 connectionEstablished = true;
+
             }
         }
 
@@ -731,8 +784,8 @@ int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
         if( connectionEstablished == true )
         {
             /* Close the connection. */
-            DisconnectMqttSession();
-            connectionEstablished = false;
+            //DisconnectMqttSession();
+            //connectionEstablished = false;
         }
 
         /**** Retry in case of failure ****************************************/

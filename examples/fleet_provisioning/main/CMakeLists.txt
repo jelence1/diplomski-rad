@@ -6,6 +6,9 @@ set(COMPONENT_SRCS
 	"pkcs11_operations.c"
 	"mbedtls_pkcs11_posix.c"
 	"lvgl_demo_ui.c"
+	"cJSON.c"
+	"dht.c"
+	"i2c.c"
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS
