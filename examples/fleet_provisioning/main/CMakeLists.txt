@@ -9,6 +9,8 @@ set(COMPONENT_SRCS
 	"cJSON.c"
 	"dht.c"
 	"i2c.c"
+	"adc.c"
+	"moisture.c"
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS

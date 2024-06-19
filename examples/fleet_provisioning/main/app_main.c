@@ -49,6 +49,8 @@
 
 #include "dht.h"
 #include "esp_idf_lib_helpers.h"
+#include "adc.h"
+#include "moisture.h"
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
@@ -142,8 +144,8 @@ static EventGroupHandle_t wifi_event_group;
 #define I2C_BUS_PORT  0
 
 #define EXAMPLE_LCD_PIXEL_CLOCK_HZ    (400 * 1000)
-#define EXAMPLE_PIN_NUM_SDA           2
-#define EXAMPLE_PIN_NUM_SCL           3
+#define EXAMPLE_PIN_NUM_SDA           5
+#define EXAMPLE_PIN_NUM_SCL           4
 #define EXAMPLE_PIN_NUM_RST           -1
 #define EXAMPLE_I2C_HW_ADDR           0x3C
 
@@ -449,27 +451,30 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 void publish_message_task(void *pvParameters) {
     //lv_disp_t *disp = (lv_disp_t *)pvParameters;
 
-    float temperature, humidity; //TODO: add moisture
+    float temperature, humidity, moisture;
     esp_err_t dht_temp;
     char display_text[512];
 
     while (1) {
         dht_temp = dht_read_float_data(SENSOR_TYPE, DHT_PIN, &humidity, &temperature) != ESP_OK;
+        moisture = read_moisture();
+
         if (dht_temp == ESP_OK) {
             if (lvgl_port_lock(0)) {
                 lv_obj_t *screen = lv_scr_act();
                 lv_obj_clean(screen); // Clear the screen to ensure it's dark
                 lv_obj_t *label = lv_label_create(screen);
                 lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
-                sprintf(display_text, "Temp: %.2f°C\nHumid: %.2f%%", temperature, humidity);
+                sprintf(display_text, "Temp: %.2f°C\nHumid: %.2f%%\nMoist: %.2f%%", temperature, humidity, moisture);
                 lv_label_set_text(label, display_text);
                 //lv_obj_set_width(label, disp->driver->hor_res);
                 // Release the mutex
                 lvgl_port_unlock();
             }
-        sendMessage(temperature, humidity, 0.0);
+        sendMessage(temperature, humidity, moisture);
 
         }
+
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
@@ -880,6 +885,8 @@ void app_main()
     filesystem_deinit();
 
     if (fleet_prov_status == EXIT_FAILURE) return;
+
+    moisture_init();
 
     xTaskCreate(publish_message_task,   // Task function
             "publish_message_task",     // Name of the task
