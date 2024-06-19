@@ -191,11 +191,13 @@ Sljedeći programski odsječak prikazuje uspostavu MQTT sjednice pomoću certifi
  status = waitForResponse();
 \end{lstlisting}
 
-\subsection{Ažuriranje softvera}
-
 \subsection{Očitavanje senzorskih mjerenja}
 
+Razvijeni sustav, osim zaslona, sadrži dva senzora koja mjere stanja iz okoline: senzor za temperaturu i vlagu zraka te senzor za vlažnost tla. Mjerenja ovih senzora šalju se na platformu AWS i simuliraju stvarna poljoprivredna mjerenja. Mjerenje temperature i vlage zraka vrši se pomoću senzora DHT11, dok se vlažnost tla mjeri senzorom VMA303. 
+
 \subsection{Slanje očitanih podataka protokolom MQTT}
+
+\subsection{Ažuriranje softvera}
 
 \section{Programska potpora za oblak}
 
