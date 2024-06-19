@@ -26,5 +26,10 @@
 	https://www.youtube.com/watch?v=qQKwywjSAgw
 
 
+
+- Poglavlje "MQTT retained messages and AWS IoT Device Shadows":
+	https://docs.aws.amazon.com/iot/latest/developerguide/mqtt.html
+
+
 --> increased memory usage in LVGL (sdkconfig) from 32 to 64
 --> decreased number of the memory buffer (sdkconfig) from 16 to 8

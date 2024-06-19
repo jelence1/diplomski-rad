@@ -51,7 +51,7 @@
 #include "esp_idf_lib_helpers.h"
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
-void sendMessage(float temperature, float humidity);
+void sendMessage(float temperature, float humidity, float moisture);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -467,7 +467,7 @@ void publish_message_task(void *pvParameters) {
                 // Release the mutex
                 lvgl_port_unlock();
             }
-        sendMessage(temperature, humidity);
+        sendMessage(temperature, humidity, 0.0);
 
         }
         vTaskDelay(pdMS_TO_TICKS(5000));
@@ -589,7 +589,7 @@ void app_main()
 
     ///////
     /* delete NVS partition (Jelena) */
-    ESP_ERROR_CHECK(nvs_flash_erase());
+    //ESP_ERROR_CHECK(nvs_flash_erase());
 
     /* Initialize NVS partition */
     esp_err_t ret = nvs_flash_init();

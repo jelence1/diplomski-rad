@@ -1254,6 +1254,7 @@ bool PublishToTopic( const char * pTopicFilter,
     if( returnStatus == false )
     {
         LogError( ( "Unable to find a free spot for outgoing PUBLISH message." ) );
+        cleanupOutgoingPublishes();
     }
     else
     {
@@ -1261,8 +1262,8 @@ bool PublishToTopic( const char * pTopicFilter,
                     ( int ) payloadLength,
                     ( const char * ) pPayload ) );
 
-        /* This example publishes to only one topic and uses QOS1. */
-        outgoingPublishPackets[ publishIndex ].pubInfo.qos = MQTTQoS1;
+        /* This example publishes to only one topic and uses QOS0. */
+        outgoingPublishPackets[ publishIndex ].pubInfo.qos = MQTTQoS0;
         outgoingPublishPackets[ publishIndex ].pubInfo.pTopicName = pTopicFilter;
         outgoingPublishPackets[ publishIndex ].pubInfo.topicNameLength = topicFilterLength;
         outgoingPublishPackets[ publishIndex ].pubInfo.pPayload = pPayload;
@@ -1289,6 +1290,7 @@ bool PublishToTopic( const char * pTopicFilter,
                         topicFilterLength,
                         pTopicFilter,
                         outgoingPublishPackets[ publishIndex ].packetId ) );
+            cleanupOutgoingPublishAt( publishIndex );
         }
     }
 

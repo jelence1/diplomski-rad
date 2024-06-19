@@ -471,12 +471,6 @@ void prepareJSONMessage(float temperature, float humidity, float moisture, uint8
     // Create the main JSON object
     cJSON *jsonObject = cJSON_CreateObject();
 
-    // Construct the device name
-    /*
-    char deviceName[64];
-    snprintf(deviceName, sizeof(deviceName), "ESP32Thing_%s", CLIENT_IDENTIFIER);
-    */
-
     struct timeval now;
     gettimeofday(&now, NULL);
     int64_t time_in_ms = (int64_t)now.tv_sec * 1000 + now.tv_usec / 1000;
@@ -501,14 +495,12 @@ void prepareJSONMessage(float temperature, float humidity, float moisture, uint8
     memcpy(buffer, jsonString, *length);
 
     // Clean up
-    cJSON_Delete(dataObject);
     cJSON_Delete(jsonObject);
     cJSON_free(jsonString); // Use cJSON_free to free the allocated string
 }
 /*-----------------------------------------------------------*/
 
-void sendMessage(float temperature, float humidity) {
-    float moisture = 0.0;
+void sendMessage(float temperature, float humidity, float moisture) {
     prepareJSONMessage(temperature, humidity, moisture, payloadBuffer, &payloadLength);
     bool status = false;
 
