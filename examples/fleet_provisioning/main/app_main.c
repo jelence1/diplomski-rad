@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include "esp_system.h"
 #include <esp_wifi.h>
@@ -21,6 +22,8 @@
 #include "protocol_examples_common.h"
 #include "esp_spiffs.h"
 #include "esp_log.h"
+
+#include "esp_sntp.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -471,6 +474,45 @@ void publish_message_task(void *pvParameters) {
     }
 }
 
+void time_sync_notification_cb(struct timeval *tv)
+{
+    ESP_LOGI(TAG, "Time synchronization event occurred");
+}
+
+void initialize_sntp(void)
+{
+    ESP_LOGI(TAG, "Initializing SNTP");
+    esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    esp_sntp_setservername(0, "pool.ntp.org");
+    sntp_set_time_sync_notification_cb(time_sync_notification_cb);
+    esp_sntp_init();
+}
+
+
+void obtain_time(void)
+{
+    initialize_sntp();
+
+    // Wait for time to be set
+    time_t now = 0;
+    struct tm timeinfo = { 0 };
+    int retry = 0;
+    const int retry_count = 10;
+
+    while (timeinfo.tm_year < (2024 - 1900) && ++retry < retry_count) {
+        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        time(&now);
+        localtime_r(&now, &timeinfo);
+    }
+
+    if (retry < retry_count) {
+        ESP_LOGI(TAG, "Time synchronized successfully");
+    } else {
+        ESP_LOGE(TAG, "Failed to synchronize time");
+    }
+}
+
 void app_main()
 {
     ESP_LOGI(TAG, "[APP] Startup..");
@@ -776,6 +818,13 @@ void app_main()
         // Release the mutex
         lvgl_port_unlock();
     }
+
+    // Obtain current time via NTP
+    obtain_time();
+
+    // Set timezone to your local timezone
+    setenv("TZ", "CET-1CEST,M3.5.0/2,M10.5.0/3", 1); // Example for Central European Time
+    tzset();
 
     vTaskDelay(pdMS_TO_TICKS(1000));
 

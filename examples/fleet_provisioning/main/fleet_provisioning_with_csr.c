@@ -467,28 +467,22 @@ static bool unsubscribeFromRegisterThingResponseTopics( void )
 }
 /*-----------------------------------------------------------*/
 
-static long generateId() {
-    srand(time(NULL));
-    long randomId = rand();
-    return randomId;
-}
-/*-----------------------------------------------------------*/
-
 void prepareJSONMessage(float temperature, float humidity, float moisture, uint8_t *buffer, size_t *length) {
     // Create the main JSON object
     cJSON *jsonObject = cJSON_CreateObject();
-    char deviceName[64];
-
-    // Add the "timestamp" field
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    cJSON_AddNumberToObject(jsonObject, "timestamp", now.tv_usec);
 
     // Construct the device name
+    /*
+    char deviceName[64];
     snprintf(deviceName, sizeof(deviceName), "ESP32Thing_%s", CLIENT_IDENTIFIER);
+    */
 
-    // Add the device name to the JSON object
-    cJSON_AddStringToObject(jsonObject, "device", deviceName);
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    int64_t time_in_ms = (int64_t)now.tv_sec * 1000 + now.tv_usec / 1000;
+    cJSON_AddNumberToObject(jsonObject, "timestamp", time_in_ms);
+    
+    cJSON_AddStringToObject(jsonObject, "device_id", CLIENT_IDENTIFIER);
 
     // Create a nested JSON object for data
     cJSON *dataObject = cJSON_CreateObject();
@@ -507,6 +501,7 @@ void prepareJSONMessage(float temperature, float humidity, float moisture, uint8
     memcpy(buffer, jsonString, *length);
 
     // Clean up
+    cJSON_Delete(dataObject);
     cJSON_Delete(jsonObject);
     cJSON_free(jsonString); // Use cJSON_free to free the allocated string
 }
