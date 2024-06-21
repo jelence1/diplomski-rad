@@ -51,6 +51,8 @@
 #include "esp_idf_lib_helpers.h"
 #include "adc.h"
 #include "moisture.h"
+#include "driver/gpio.h"
+#include "led_strip.h"
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
@@ -446,6 +448,53 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
     }*/
 
 
+}
+
+#define BLINK_GPIO GPIO_NUM_8
+#define BLINK_LED_RMT_CHANNEL 0
+
+static led_strip_handle_t led_strip;
+
+
+static void blink_led(led_strip_handle_t led_strip, uint8_t s_led_state)
+{
+    /* If the addressable LED is enabled */
+    if (s_led_state) {
+        /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
+        led_strip_set_pixel(led_strip, 0, 16, 16, 16);
+        /* Refresh the strip to send data */
+        led_strip_refresh(led_strip);
+    } else {
+        /* Set all LED off to clear all pixels */
+        led_strip_clear(led_strip);
+    }
+}
+
+static void configure_led(led_strip_handle_t led_strip)
+{
+    ESP_LOGI(TAG, "Example configured to blink addressable LED!");
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = BLINK_GPIO,
+        .max_leds = 1, // at least one LED on board
+    };
+    led_strip_rmt_config_t rmt_config = {
+        .resolution_hz = 10 * 1000 * 1000, // 10MHz
+        .flags.with_dma = false,
+    };
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+    led_strip_clear(led_strip);
+}
+
+void blinky_task(void *pvParameters) {
+    uint8_t s_led_state = 0;
+
+    configure_led(led_strip);
+
+    while (1) {
+        blink_led(led_strip, s_led_state);
+        s_led_state = !s_led_state;
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
 
 void publish_message_task(void *pvParameters) {
@@ -891,6 +940,13 @@ void app_main()
     xTaskCreate(publish_message_task,   // Task function
             "publish_message_task",     // Name of the task
             4096,                       // Stack size for the task
+            NULL,                       // Task input parameters
+            5,                          // Task priority
+            NULL);                      // Task handle
+
+    xTaskCreate(blinky_task,   // Task function
+            "blinky_task",     // Name of the task
+            2048,                       // Stack size for the task
             NULL,                       // Task input parameters
             5,                          // Task priority
             NULL);                      // Task handle
