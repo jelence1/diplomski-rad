@@ -26,5 +26,5 @@ float read_moisture(void) {
 	}
 
     return moisture;
-	// return adc_value;
+	//return adc_value;
 }

@@ -3,7 +3,7 @@
 #include "adc.h"
 
 #define WET_SOIL	4095
-#define DRY_SOIL	2000
+#define DRY_SOIL	500
 
 static const adc_channel_t MOISTURE_CHANNEL = ADC_CHANNEL_2;
 
