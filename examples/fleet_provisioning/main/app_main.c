@@ -56,6 +56,7 @@
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
+int startOTADemo(void);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -455,8 +456,7 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 
 static led_strip_handle_t led_strip;
 
-
-static void blink_led(led_strip_handle_t led_strip, uint8_t s_led_state)
+static void blink_led(uint8_t s_led_state)
 {
     /* If the addressable LED is enabled */
     if (s_led_state) {
@@ -470,7 +470,7 @@ static void blink_led(led_strip_handle_t led_strip, uint8_t s_led_state)
     }
 }
 
-static void configure_led(led_strip_handle_t led_strip)
+static void configure_led()
 {
     ESP_LOGI(TAG, "Example configured to blink addressable LED!");
     led_strip_config_t strip_config = {
@@ -488,10 +488,10 @@ static void configure_led(led_strip_handle_t led_strip)
 void blinky_task(void *pvParameters) {
     uint8_t s_led_state = 0;
 
-    configure_led(led_strip);
+    configure_led();
 
     while (1) {
-        blink_led(led_strip, s_led_state);
+        blink_led(s_led_state);
         s_led_state = !s_led_state;
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -525,6 +525,12 @@ void publish_message_task(void *pvParameters) {
         }
 
         vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+}
+
+void ota_task(void *pvParameters) {
+    int returnStatus = startOTADemo();
+    while(1){
     }
 }
 
@@ -643,7 +649,7 @@ void app_main()
 
     ///////
     /* delete NVS partition (Jelena) */
-    //ESP_ERROR_CHECK(nvs_flash_erase());
+    ESP_ERROR_CHECK(nvs_flash_erase());
 
     /* Initialize NVS partition */
     esp_err_t ret = nvs_flash_init();
@@ -937,6 +943,10 @@ void app_main()
 
     moisture_init();
 
+    fleet_prov_status = startOTADemo();
+
+    if (fleet_prov_status == EXIT_FAILURE) return;
+
     xTaskCreate(publish_message_task,   // Task function
             "publish_message_task",     // Name of the task
             4096,                       // Stack size for the task
@@ -950,6 +960,14 @@ void app_main()
             NULL,                       // Task input parameters
             5,                          // Task priority
             NULL);                      // Task handle
+
+    /*xTaskCreate(ota_task,   // Task function
+            "ota_task",     // Name of the task
+            4096,                       // Stack size for the task
+            NULL,                       // Task input parameters
+            5,                          // Task priority
+            NULL);                      // Task handle
+*/
 
     //pkcs11CloseSession( p11Session );
 
