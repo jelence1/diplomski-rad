@@ -1271,3 +1271,40 @@ bool pkcs11CloseSession( CK_SESSION_HANDLE p11Session )
 }
 
 /*-----------------------------------------------------------*/
+
+bool loadCodesignCertificate(CK_SESSION_HANDLE p11Session,
+                           const char * pClaimCertPath,
+                           const char * pClaimCertLabel)
+{
+#if (MBEDTLS_VERSION_NUMBER >= 0x03000000)
+    mbedtls_entropy_init(&entropy);
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    int mbedtls_ctr_ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0);
+    if (mbedtls_ctr_ret != 0) {
+        LogError( ( "mbedtls_ctr_drbg_seed returned -0x%04x\n", mbedtls_ctr_ret ) );
+        return false;
+    }
+#endif
+    bool status;
+    char claimCert[ CLAIM_CERT_BUFFER_LENGTH ] = { 0 };
+    size_t claimCertLength = 0;
+    CK_RV ret;
+
+    assert( pClaimCertPath != NULL );
+    assert( pClaimCertLabel != NULL );
+
+    status = readFile( pClaimCertPath, claimCert, CLAIM_CERT_BUFFER_LENGTH,
+                       &claimCertLength );
+
+    if( status == true )
+    {
+        ret = provisionCertificate( p11Session, claimCert,
+                                    claimCertLength + 1, /* MbedTLS includes null character in length for PEM objects. */
+                                    pClaimCertLabel );
+        status = ( ret == CKR_OK );
+    }
+
+    return status;
+}
+
+/*-----------------------------------------------------------*/

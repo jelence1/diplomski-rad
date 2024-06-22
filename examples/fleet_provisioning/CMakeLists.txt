@@ -20,4 +20,3 @@ project(fleet_provisioning)
 # the generated image should be flashed when the entire project is flashed to
 # the target with 'idf.py -p PORT flash'.
 spiffs_create_partition_image(spiffs_storage ./spiffs_image FLASH_IN_PROJECT)
-target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "ota/certs/codesign.crt" TEXT)

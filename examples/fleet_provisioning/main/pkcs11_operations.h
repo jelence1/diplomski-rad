@@ -103,4 +103,8 @@ bool loadCertificate( CK_SESSION_HANDLE p11Session,
  */
 bool pkcs11CloseSession( CK_SESSION_HANDLE p11Session );
 
+bool loadCodesignCertificate(CK_SESSION_HANDLE p11Session,
+                           const char * pClaimCertPath,
+                           const char * pClaimCertLabel);
+
 #endif /* ifndef PKCS11_OPERATIONS_H_ */

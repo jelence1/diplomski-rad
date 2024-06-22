@@ -57,6 +57,72 @@
 /* Clock for timer. */
 #include "clock.h"
 
+#include "mqtt_subscription_manager.h"
+
+/* OTA Library include. */
+#include "ota.h"
+#include "ota_config.h"
+
+/* OTA Library Interface include. */
+#include "ota_os_freertos.h"
+#include "ota_mqtt_interface.h"
+#include "ota_pal.h"
+
+/* Include firmware version struct definition. */
+#include "ota_appversion32.h"
+
+/**
+ * @brief The common prefix for all OTA topics.
+ */
+#define OTA_TOPIC_PREFIX    "$aws/things/+/"
+
+/**
+ * @brief The string used for jobs topics.
+ */
+#define OTA_TOPIC_JOBS      "jobs"
+
+/**
+ * @brief The string used for streaming service topics.
+ */
+#define OTA_TOPIC_STREAM    "streams"
+
+/**
+ * @brief Enum for type of OTA job messages received.
+ */
+typedef enum jobMessageType
+{
+    jobMessageTypeNextGetAccepted = 0,
+    jobMessageTypeNextNotify,
+    jobMessageTypeMax
+} jobMessageType_t;
+
+/**
+ * @brief Event buffer.
+ */
+static OtaEventData_t eventBuffer[ otaconfigMAX_NUM_OTA_DATA_BUFFERS ];
+
+/**
+ * @brief Callback registered with the OTA library that notifies the OTA agent
+ * of an incoming PUBLISH containing a job document.
+ *
+ * @param[in] pContext MQTT context which stores the connection.
+ * @param[in] pPublishInfo MQTT packet information which stores details of the
+ * job document.
+ */
+static void mqttJobCallback( MQTTContext_t * pContext,
+                             MQTTPublishInfo_t * pPublishInfo );
+
+/**
+ * @brief Callback that notifies the OTA library when a data block is received.
+ *
+ * @param[in] pContext MQTT context which stores the connection.
+ * @param[in] pPublishInfo MQTT packet that stores the information of the file block.
+ */
+static void mqttDataCallback( MQTTContext_t * pContext,
+                              MQTTPublishInfo_t * pPublishInfo );
+
+static SubscriptionManagerCallback_t otaMessageCallback[] = { mqttJobCallback, mqttDataCallback };
+
 /**
  * These configurations are required. Throw compilation error if the below
  * configs are not defined.
@@ -1332,3 +1398,370 @@ bool ProcessLoopWithTimeout( void )
     return returnStatus;
 }
 /*-----------------------------------------------------------*/
+
+/*-----------------------------------------------------------*/
+
+OtaEventData_t * otaEventBufferGet( void )
+{
+    uint32_t ulIndex = 0;
+    OtaEventData_t * pFreeBuffer = NULL;
+
+    for( ulIndex = 0; ulIndex < otaconfigMAX_NUM_OTA_DATA_BUFFERS; ulIndex++ )
+    {
+        if( eventBuffer[ ulIndex ].bufferUsed == false )
+        {
+            eventBuffer[ ulIndex ].bufferUsed = true;
+            pFreeBuffer = &eventBuffer[ ulIndex ];
+            break;
+        }
+    }
+
+
+    return pFreeBuffer;
+}
+
+/*-----------------------------------------------------------*/
+
+jobMessageType_t getJobMessageType( const char * pTopicName,
+                                    uint16_t topicNameLength )
+{
+    uint16_t index = 0U;
+    MQTTStatus_t mqttStatus = MQTTSuccess;
+    bool isMatch = false;
+    jobMessageType_t jobMessageIndex = jobMessageTypeMax;
+
+    /* For suppressing compiler-warning: unused variable. */
+    ( void ) mqttStatus;
+
+    /* Lookup table for OTA job message string. */
+    static const char * const pJobTopicFilters[ jobMessageTypeMax ] =
+    {
+        OTA_TOPIC_PREFIX OTA_TOPIC_JOBS "/$next/get/accepted",
+        OTA_TOPIC_PREFIX OTA_TOPIC_JOBS "/notify-next",
+    };
+
+    /* Match the input topic filter against the wild-card pattern of topics filters
+    * relevant for the OTA Update service to determine the type of topic filter. */
+    for( ; index < jobMessageTypeMax; index++ )
+    {
+        mqttStatus = MQTT_MatchTopic( pTopicName,
+                                      topicNameLength,
+                                      pJobTopicFilters[ index ],
+                                      strlen( pJobTopicFilters[ index ] ),
+                                      &isMatch );
+        assert( mqttStatus == MQTTSuccess );
+
+        if( isMatch )
+        {
+            jobMessageIndex = index;
+            break;
+        }
+    }
+
+    return jobMessageIndex;
+}
+
+/*-----------------------------------------------------------*/
+
+static void mqttJobCallback( MQTTContext_t * pContext,
+                             MQTTPublishInfo_t * pPublishInfo )
+{
+    OtaEventData_t * pData;
+    OtaEventMsg_t eventMsg = { 0 };
+    jobMessageType_t jobMessageType = 0;
+
+    assert( pPublishInfo != NULL );
+    assert( pContext != NULL );
+
+    ( void ) pContext;
+
+    jobMessageType = getJobMessageType( pPublishInfo->pTopicName, pPublishInfo->topicNameLength );
+
+    switch( jobMessageType )
+    {
+        case jobMessageTypeNextGetAccepted:
+        case jobMessageTypeNextNotify:
+
+            pData = otaEventBufferGet();
+
+            if( pData != NULL )
+            {
+                memcpy( pData->data, pPublishInfo->pPayload, pPublishInfo->payloadLength );
+                pData->dataLength = pPublishInfo->payloadLength;
+                eventMsg.eventId = OtaAgentEventReceivedJobDocument;
+                eventMsg.pEventData = pData;
+
+                /* Send job document received event. */
+                OTA_SignalEvent( &eventMsg );
+            }
+            else
+            {
+                LogError( ( "No OTA data buffers available." ) );
+            }
+
+            break;
+
+        default:
+// %zu
+            LogInfo( ( "Received job message %s size %zu.\n\n",
+                       pPublishInfo->pTopicName,
+                       pPublishInfo->payloadLength ) );
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+static void mqttDataCallback( MQTTContext_t * pContext,
+                              MQTTPublishInfo_t * pPublishInfo )
+{
+    OtaEventData_t * pData;
+    OtaEventMsg_t eventMsg = { 0 };
+
+    assert( pPublishInfo != NULL );
+    assert( pContext != NULL );
+
+    ( void ) pContext;
+
+    LogInfo( ( "Received data message callback, size %zu.\n\n", pPublishInfo->payloadLength ) );
+
+    pData = otaEventBufferGet();
+
+    if( pData != NULL )
+    {
+        memcpy( pData->data, pPublishInfo->pPayload, pPublishInfo->payloadLength );
+        pData->dataLength = pPublishInfo->payloadLength;
+        eventMsg.eventId = OtaAgentEventReceivedFileBlock;
+        eventMsg.pEventData = pData;
+
+        /* Send job document received event. */
+        OTA_SignalEvent( &eventMsg );
+    }
+    else
+    {
+        LogError( ( "No OTA data buffers available." ) );
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+static void registerSubscriptionManagerCallback( const char * pTopicFilter,
+                                                 uint16_t topicFilterLength )
+{
+    bool isMatch = false;
+    MQTTStatus_t mqttStatus = MQTTSuccess;
+    SubscriptionManagerStatus_t subscriptionStatus = SUBSCRIPTION_MANAGER_SUCCESS;
+
+    uint16_t index = 0U;
+
+    /* For suppressing compiler-warning: unused variable. */
+    ( void ) mqttStatus;
+
+    /* Lookup table for OTA message string. */
+    static const char * const pWildCardTopicFilters[] =
+    {
+        OTA_TOPIC_PREFIX OTA_TOPIC_JOBS "/#",
+        OTA_TOPIC_PREFIX OTA_TOPIC_STREAM "/#"
+    };
+
+    /* Match the input topic filter against the wild-card pattern of topics filters
+    * relevant for the OTA Update service to determine the type of topic filter. */
+    for( ; index < 2; index++ )
+    {
+        mqttStatus = MQTT_MatchTopic( pTopicFilter,
+                                      topicFilterLength,
+                                      pWildCardTopicFilters[ index ],
+                                      strlen( pWildCardTopicFilters[ index ] ),
+                                      &isMatch );
+        assert( mqttStatus == MQTTSuccess );
+
+        if( isMatch )
+        {
+            /* Register callback to subscription manager. */
+            subscriptionStatus = SubscriptionManager_RegisterCallback( pWildCardTopicFilters[ index ],
+                                                                       strlen( pWildCardTopicFilters[ index ] ),
+                                                                       otaMessageCallback[ index ] );
+
+            if( subscriptionStatus != SUBSCRIPTION_MANAGER_SUCCESS )
+            {
+                LogWarn( ( "Failed to register a callback to subscription manager with error = %d.",
+                           subscriptionStatus ) );
+            }
+
+            break;
+        }
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+OtaMqttStatus_t SubscribeToOTATopic( const char * pTopicFilter,
+                                      uint16_t topicFilterLength,
+                                      uint8_t qos )
+{
+    OtaMqttStatus_t otaRet = OtaMqttSuccess;
+
+    MQTTStatus_t mqttStatus = MQTTBadParameter;
+    MQTTContext_t * pMqttContext = &mqttContext;
+    MQTTSubscribeInfo_t pSubscriptionList[ 1 ];
+
+    assert( pMqttContext != NULL );
+    assert( pTopicFilter != NULL );
+    assert( topicFilterLength > 0 );
+
+    ( void ) qos;
+
+    /* Start with everything at 0. */
+    ( void ) memset( ( void * ) pSubscriptionList, 0x00, sizeof( pSubscriptionList ) );
+
+    /* Set the topic and topic length. */
+    pSubscriptionList[ 0 ].pTopicFilter = pTopicFilter;
+    pSubscriptionList[ 0 ].topicFilterLength = topicFilterLength;
+
+
+    /* Send SUBSCRIBE packet. */
+    mqttStatus = MQTT_Subscribe( pMqttContext,
+                                    pSubscriptionList,
+                                    sizeof( pSubscriptionList ) / sizeof( MQTTSubscribeInfo_t ),
+                                    MQTT_GetPacketId( pMqttContext ) );
+
+    if( mqttStatus != MQTTSuccess )
+    {
+        LogError( ( "Failed to send SUBSCRIBE packet to broker with error = %u.",
+                    mqttStatus ) );
+
+        otaRet = OtaMqttSubscribeFailed;
+    }
+    else
+    {
+        LogInfo( ( "SUBSCRIBE topic %.*s to broker.\n\n",
+                   topicFilterLength,
+                   pTopicFilter ) );
+
+        registerSubscriptionManagerCallback( pTopicFilter, topicFilterLength );
+    }
+
+    return otaRet;
+}
+
+/*-----------------------------------------------------------*/
+
+OtaMqttStatus_t UnsubscribeFromOTATopic( const char * pTopicFilter,
+                                        uint16_t topicFilterLength,
+                                        uint8_t qos )
+{
+    OtaMqttStatus_t otaRet = OtaMqttSuccess;
+    MQTTStatus_t mqttStatus = MQTTBadParameter;
+
+    MQTTSubscribeInfo_t pSubscriptionList[ 1 ];
+    MQTTContext_t * pMqttContext = &mqttContext;
+
+    ( void ) qos;
+
+    /* Start with everything at 0. */
+    ( void ) memset( ( void * ) pSubscriptionList, 0x00, sizeof( pSubscriptionList ) );
+
+    /* Set the topic and topic length. */
+    pSubscriptionList[ 0 ].pTopicFilter = pTopicFilter;
+    pSubscriptionList[ 0 ].topicFilterLength = topicFilterLength;
+
+
+    /* Send UNSUBSCRIBE packet. */
+    mqttStatus = MQTT_Unsubscribe( pMqttContext,
+                                    pSubscriptionList,
+                                    sizeof( pSubscriptionList ) / sizeof( MQTTSubscribeInfo_t ),
+                                    MQTT_GetPacketId( pMqttContext ) );
+
+    if( mqttStatus != MQTTSuccess )
+    {
+        LogError( ( "Failed to send UNSUBSCRIBE packet to broker with error = %u.",
+                    mqttStatus ) );
+
+        otaRet = OtaMqttUnsubscribeFailed;
+    }
+    else
+    {
+        LogInfo( ( "UNSUBSCRIBE topic %.*s to broker.\n\n",
+                   topicFilterLength,
+                   pTopicFilter ) );
+    }
+
+    return otaRet;
+}
+
+OtaMqttStatus_t PublishToOTATopic( const char * const pacTopic,
+                                    uint16_t topicLen,
+                                    const char * pMsg,
+                                    uint32_t msgSize,
+                                    uint8_t qos )
+{
+    OtaMqttStatus_t otaRet = OtaMqttSuccess;
+
+    MQTTStatus_t mqttStatus = MQTTBadParameter;
+    MQTTPublishInfo_t publishInfo = { 0 };
+    MQTTContext_t * pMqttContext = &mqttContext;
+    BackoffAlgorithmStatus_t backoffAlgStatus = BackoffAlgorithmSuccess;
+    BackoffAlgorithmContext_t reconnectParams;
+    uint16_t nextRetryBackOff;
+    int mqtt_publish_retry_max_attempts = 3;
+
+
+    /* Initialize reconnect attempts and interval */
+    BackoffAlgorithm_InitializeParams( &reconnectParams,
+                                       CONNECTION_RETRY_BACKOFF_BASE_MS,
+                                       CONNECTION_RETRY_MAX_BACKOFF_DELAY_MS,
+                                       mqtt_publish_retry_max_attempts );
+
+    /* Set the required publish parameters. */
+    publishInfo.pTopicName = pacTopic;
+    publishInfo.topicNameLength = topicLen;
+    publishInfo.qos = qos;
+    publishInfo.pPayload = pMsg;
+    publishInfo.payloadLength = msgSize;
+
+    do
+    {
+        mqttStatus = MQTT_Publish( pMqttContext,
+                                    &publishInfo,
+                                    MQTT_GetPacketId( pMqttContext ) );
+
+        if( qos == 1 )
+        {
+            /* Loop to receive packet from transport interface. */
+            mqttStatus = MQTT_ReceiveLoop( &mqttContext );
+        }
+
+        if( mqttStatus != MQTTSuccess )
+        {
+            /* Generate a random number and get back-off value (in milliseconds) for the next connection retry. */
+            backoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &reconnectParams, generateRandomNumber(), &nextRetryBackOff );
+
+            if( backoffAlgStatus == BackoffAlgorithmRetriesExhausted )
+            {
+                LogError( ( "Publish failed, all attempts exhausted." ) );
+            }
+            else if( backoffAlgStatus == BackoffAlgorithmSuccess )
+            {
+                LogWarn( ( "Publish failed. Retrying connection "
+                            "after %hu ms backoff.",
+                            ( unsigned short ) nextRetryBackOff ) );
+                vTaskDelay( nextRetryBackOff/portTICK_PERIOD_MS );
+            }
+        }
+    } while( ( mqttStatus != MQTTSuccess ) && ( backoffAlgStatus == BackoffAlgorithmSuccess ) );
+
+
+    if( mqttStatus != MQTTSuccess )
+    {
+        LogError( ( "Failed to send PUBLISH packet to broker with error = %u.", mqttStatus ) );
+
+        otaRet = OtaMqttPublishFailed;
+    }
+    else
+    {
+        LogInfo( ( "Sent PUBLISH packet to broker %.*s to broker.\n\n",
+                   topicLen,
+                   pacTopic ) );
+    }
+
+    return otaRet;
+}

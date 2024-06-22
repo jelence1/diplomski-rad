@@ -2128,13 +2128,6 @@ CONFIG_AWS_OTA_LOG_INFO=y
 # end of AWS OTA
 
 #
-# ESP Secure Cert Manager
-#
-CONFIG_ESP_SECURE_CERT_DS_PERIPHERAL=y
-# CONFIG_ESP_SECURE_CERT_SUPPORT_LEGACY_FORMATS is not set
-# end of ESP Secure Cert Manager
-
-#
 # LVGL configuration
 #
 CONFIG_LV_CONF_SKIP=y
@@ -2438,6 +2431,13 @@ CONFIG_LV_BUILD_EXAMPLES=y
 # CONFIG_LV_USE_DEMO_MUSIC is not set
 # end of Demos
 # end of LVGL configuration
+
+#
+# ESP Secure Cert Manager
+#
+CONFIG_ESP_SECURE_CERT_DS_PERIPHERAL=y
+# CONFIG_ESP_SECURE_CERT_SUPPORT_LEGACY_FORMATS is not set
+# end of ESP Secure Cert Manager
 # end of Component config
 
 # CONFIG_IDF_EXPERIMENTAL_FEATURES is not set

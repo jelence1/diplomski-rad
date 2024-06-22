@@ -102,7 +102,7 @@
 /* Include firmware version struct definition. */
 #include "ota_appversion32.h"
 
-extern const char pcAwsCodeSigningCertPem[] asm("_binary_codesign_crt_start");
+extern const char pcAwsCodeSigningCertPem[] asm("tuturutu");
 
 /**
  * @brief Struct for firmware version.
@@ -134,7 +134,7 @@ const AppVersion32_t appFirmwareVersion =
  */
 #define OTA_MAX_STREAM_NAME_SIZE                 ( 128U )
 
-/**
+/**f
  * @brief The network buffer must remain valid when OTA library task is running.
  */
 static uint8_t otaNetworkBuffer[ OTA_NETWORK_BUFFER_SIZE ];
@@ -163,11 +163,6 @@ uint8_t decodeMem[ otaconfigFILE_BLOCK_SIZE ];
  * @brief Bitmap memory.
  */
 uint8_t bitmap[ OTA_MAX_BLOCK_BITMAP_SIZE ];
-
-/**
- * @brief Event buffer.
- */
-static OtaEventData_t eventBuffer[ otaconfigMAX_NUM_OTA_DATA_BUFFERS ];
 
 /**
  * @brief The buffer passed to the OTA Agent from application while initializing.
@@ -1033,9 +1028,9 @@ static void setOtaInterfaces( OtaInterfaces_t * pOtaInterfaces )
     pOtaInterfaces->os.mem.free = Free_FreeRTOS;
 
     /* Initialize the OTA library MQTT Interface.*/
-    //pOtaInterfaces->mqtt.subscribe = mqttSubscribe;
-    //pOtaInterfaces->mqtt.publish = mqttPublish;
-    //pOtaInterfaces->mqtt.unsubscribe = mqttUnsubscribe;
+    pOtaInterfaces->mqtt.subscribe = SubscribeToOTATopic;
+    pOtaInterfaces->mqtt.publish = PublishToOTATopic;
+    pOtaInterfaces->mqtt.unsubscribe = UnsubscribeFromOTATopic;
 
     /* Initialize the OTA library PAL Interface.*/
     pOtaInterfaces->pal.getPlatformImageState = otaPal_GetPlatformImageState;
@@ -1066,7 +1061,7 @@ static void * otaTask( void * pParam )
 #define OTA_TASK_STACK_SIZE 4096
 #define OTA_TASK_PRIORITY   5
 
-int startOTADemo( void )
+int startOTADemo( CK_SESSION_HANDLE *p11Session )
 {
     /* Status indicating a successful demo or not. */
     int returnStatus = EXIT_SUCCESS;
@@ -1092,11 +1087,25 @@ int startOTADemo( void )
     /* Maximum time to wait for the OTA agent to get suspended. */
     int16_t suspendTimeout;
 
+    /* Buffer for holding received certificate until it is saved. */
+    char certificate[ CERT_BUFFER_LENGTH ];
+    size_t certificateLength = CERT_BUFFER_LENGTH;
+
     /* Set OTA Library interfaces.*/
     setOtaInterfaces( &otaInterfaces );
 
+    bool status = loadCodesignCertificate(*p11Session,
+                                        CODESIGN_CERT_PATH,
+                                        pkcs11configLABEL_CLAIM_CERTIFICATE );
+                                        
+    status = loadCertificate( *p11Session,
+                                certificate,
+                                pkcs11configLABEL_CLAIM_CERTIFICATE,
+                                certificateLength );
+
+
     /* Set OTA Code Signing Certificate */
-    if( !otaPal_SetCodeSigningCertificate( pcAwsCodeSigningCertPem ) )
+    if( !otaPal_SetCodeSigningCertificate( certificate ) )
     {
         LogError( ( "Failed to allocate memory for Code Signing Certificate" ) );
         returnStatus = EXIT_FAILURE;
@@ -1156,6 +1165,53 @@ int startOTADemo( void )
    
 
     /****************************** OTA Demo loop. ******************************/
+
+    if( returnStatus == EXIT_SUCCESS )
+    {
+        /* Wait till OTA library is stopped, output statistics for currently running
+         * OTA job */
+        while( ( ( state = OTA_GetState() ) != OtaAgentStateStopped ) )
+        {
+            /* Check if OTA process was suspended and resume if required. */
+            if( state == OtaAgentStateSuspended )
+            {
+                /* Resume OTA operations. */
+                OTA_Resume();
+                LogInfo( ("Resume OTA operations.") );
+            }
+            else
+            {
+                /* Send start event to OTA Agent.*/
+                eventMsg.eventId = OtaAgentEventStart;
+                OTA_SignalEvent( &eventMsg );
+                LogInfo( ("Send start event to OTA Agent.") );
+            }
+
+            /* Loop to receive packet from transport interface. */
+            int status = waitForResponse();
+
+            if( status == true )
+            {
+                /* Get OTA statistics for currently executing job. */
+                OTA_GetStatistics( &otaStatistics );
+
+                LogInfo( ( " Received: %"PRIu32"   Queued: %"PRIu32"   Processed: %"PRIu32"   Dropped: %"PRIu32"",
+                            otaStatistics.otaPacketsReceived,
+                            otaStatistics.otaPacketsQueued,
+                            otaStatistics.otaPacketsProcessed,
+                            otaStatistics.otaPacketsDropped ) );
+
+                /* Delay to allow data to buffer for MQTT_ProcessLoop. */
+                vTaskDelay( pdMS_TO_TICKS( 5 ) );
+            }
+            else
+            {
+                LogError( ( "Error waiting for response." ) );
+
+
+            }
+        }
+    }
 
     return returnStatus;
 }

@@ -56,7 +56,7 @@
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
-int startOTADemo(void);
+int startOTADemo(CK_SESSION_HANDLE *p11Session);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -937,7 +937,7 @@ void app_main()
 
     moisture_init();
 
-    fleet_prov_status = startOTADemo();
+    fleet_prov_status = startOTADemo(&p11Session);
 
     if (fleet_prov_status == EXIT_FAILURE) return;
 

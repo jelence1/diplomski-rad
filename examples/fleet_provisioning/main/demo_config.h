@@ -127,6 +127,9 @@
  */
 #define CLAIM_PRIVATE_KEY_PATH    "/spiffs/certs/claim_private.key"
 
+#define CODESIGN_CERT_PATH    "/spiffs/certs/codesign.crt"
+
+
 /**
  * @brief Name of the provisioning template to use for the RegisterThing
  * portion of the Fleet Provisioning workflow.

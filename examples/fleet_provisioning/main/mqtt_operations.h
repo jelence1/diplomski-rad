@@ -29,6 +29,18 @@
 /* corePKCS11 include. */
 #include "core_pkcs11.h"
 
+/* OTA Library include. */
+#include "ota.h"
+#include "ota_config.h"
+
+/* OTA Library Interface include. */
+#include "ota_os_freertos.h"
+#include "ota_mqtt_interface.h"
+#include "ota_pal.h"
+
+/* Include firmware version struct definition. */
+#include "ota_appversion32.h"
+
 /**
  * @brief Application callback type to handle the incoming publishes.
  *
@@ -110,5 +122,65 @@ bool PublishToTopic( const char * pTopic,
  * false otherwise.
  */
 bool ProcessLoopWithTimeout( void );
+
+/**
+ * @brief Subscribe to the MQTT topic filter, and registers the handler for the topic filter with the subscription manager.
+ *
+ * This function subscribes to the Mqtt topics with the Quality of service
+ * received as parameter. This function also registers a callback for the
+ * topicfilter.
+ *
+ * @param[in] pTopicFilter Mqtt topic filter.
+ *
+ * @param[in] topicFilterLength Length of the topic filter.
+ *
+ * @param[in] qos Quality of Service
+ *
+ * @return OtaMqttSuccess if success , other error code on failure.
+ */
+OtaMqttStatus_t SubscribeToOTATopic( const char * pTopicFilter,
+                                      uint16_t topicFilterLength,
+                                      uint8_t qos );
+
+/**
+ * @brief Unsubscribe to the Mqtt topics.
+ *
+ * This function unsubscribes to the Mqtt topics with the Quality of service
+ * received as parameter.
+ *
+ * @param[in] pTopicFilter Mqtt topic filter.
+ *
+ * @param[in] topicFilterLength Length of the topic filter.
+ *
+ * @param[qos] qos Quality of Service
+ *
+ * @return  OtaMqttSuccess if success , other error code on failure.
+ */
+OtaMqttStatus_t UnsubscribeFromOTATopic( const char * pTopicFilter,
+                                        uint16_t topicFilterLength,
+                                        uint8_t qos );
+
+/**
+ * @brief Publish message to a topic.
+ *
+ * This function publishes a message to a given topic & QoS.
+ *
+ * @param[in] pacTopic Mqtt topic filter.
+ *
+ * @param[in] topicLen Length of the topic filter.
+ *
+ * @param[in] pMsg Message to publish.
+ *
+ * @param[in] msgSize Message size.
+ *
+ * @param[in] qos Quality of Service
+ *
+ * @return OtaMqttSuccess if success , other error code on failure.
+ */
+OtaMqttStatus_t PublishToOTATopic( const char * const pacTopic,
+                                    uint16_t topicLen,
+                                    const char * pMsg,
+                                    uint32_t msgSize,
+                                    uint8_t qos );
 
 #endif /* ifndef MQTT_OPERATIONS_H_ */
