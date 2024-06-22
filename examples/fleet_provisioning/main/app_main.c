@@ -455,8 +455,7 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 
 static led_strip_handle_t led_strip;
 
-
-static void blink_led(led_strip_handle_t led_strip, uint8_t s_led_state)
+static void blink_led(uint8_t s_led_state)
 {
     /* If the addressable LED is enabled */
     if (s_led_state) {
@@ -470,7 +469,7 @@ static void blink_led(led_strip_handle_t led_strip, uint8_t s_led_state)
     }
 }
 
-static void configure_led(led_strip_handle_t led_strip)
+static void configure_led()
 {
     ESP_LOGI(TAG, "Example configured to blink addressable LED!");
     led_strip_config_t strip_config = {
@@ -488,10 +487,10 @@ static void configure_led(led_strip_handle_t led_strip)
 void blinky_task(void *pvParameters) {
     uint8_t s_led_state = 0;
 
-    configure_led(led_strip);
+    configure_led();
 
     while (1) {
-        blink_led(led_strip, s_led_state);
+        blink_led(s_led_state);
         s_led_state = !s_led_state;
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
