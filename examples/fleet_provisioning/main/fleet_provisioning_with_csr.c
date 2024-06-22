@@ -79,6 +79,113 @@
 
 #include "cJSON.h"
 
+/* Clock for timer. */
+#include "clock.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "core_mqtt.h"
+#include "mqtt_subscription_manager.h"
+
+/*Include backoff algorithm header for retry logic.*/
+#include "backoff_algorithm.h"
+
+/* OTA Library include. */
+#include "ota.h"
+#include "ota_config.h"
+
+/* OTA Library Interface include. */
+#include "ota_os_freertos.h"
+#include "ota_mqtt_interface.h"
+#include "ota_pal.h"
+
+/* Include firmware version struct definition. */
+#include "ota_appversion32.h"
+
+extern const char pcAwsCodeSigningCertPem[] asm("_binary_codesign_crt_start");
+
+/**
+ * @brief Struct for firmware version.
+ */
+const AppVersion32_t appFirmwareVersion =
+{
+    .u.x.major = APP_VERSION_MAJOR,
+    .u.x.minor = APP_VERSION_MINOR,
+    .u.x.build = APP_VERSION_BUILD,
+};
+
+/**
+ * @brief Size of the network buffer to receive the MQTT message.
+ *
+ * The largest message size is data size from the AWS IoT streaming service,
+ * otaconfigFILE_BLOCK_SIZE + extra for headers.
+ */
+
+#define OTA_NETWORK_BUFFER_SIZE                  ( otaconfigFILE_BLOCK_SIZE + 128 )
+
+/**
+ * @brief The maximum size of the file paths used in the demo.
+ */
+#define OTA_MAX_FILE_PATH_SIZE                   ( 260U )
+
+/**
+ * @brief The maximum size of the stream name required for downloading update file
+ * from streaming service.
+ */
+#define OTA_MAX_STREAM_NAME_SIZE                 ( 128U )
+
+/**
+ * @brief The network buffer must remain valid when OTA library task is running.
+ */
+static uint8_t otaNetworkBuffer[ OTA_NETWORK_BUFFER_SIZE ];
+
+/**
+ * @brief Update File path buffer.
+ */
+uint8_t updateFilePath[ OTA_MAX_FILE_PATH_SIZE ];
+
+/**
+ * @brief Certificate File path buffer.
+ */
+uint8_t certFilePath[ OTA_MAX_FILE_PATH_SIZE ];
+
+/**
+ * @brief Stream name buffer.
+ */
+uint8_t streamName[ OTA_MAX_STREAM_NAME_SIZE ];
+
+/**
+ * @brief Decode memory.
+ */
+uint8_t decodeMem[ otaconfigFILE_BLOCK_SIZE ];
+
+/**
+ * @brief Bitmap memory.
+ */
+uint8_t bitmap[ OTA_MAX_BLOCK_BITMAP_SIZE ];
+
+/**
+ * @brief Event buffer.
+ */
+static OtaEventData_t eventBuffer[ otaconfigMAX_NUM_OTA_DATA_BUFFERS ];
+
+/**
+ * @brief The buffer passed to the OTA Agent from application while initializing.
+ */
+static OtaAppBuffer_t otaBuffer =
+{
+    .pUpdateFilePath    = updateFilePath,
+    .updateFilePathsize = OTA_MAX_FILE_PATH_SIZE,
+    .pCertFilePath      = certFilePath,
+    .certFilePathSize   = OTA_MAX_FILE_PATH_SIZE,
+    .pStreamName        = streamName,
+    .streamNameSize     = OTA_MAX_STREAM_NAME_SIZE,
+    .pDecodeMemory      = decodeMem,
+    .decodeMemorySize   = otaconfigFILE_BLOCK_SIZE,
+    .pFileBitmap        = bitmap,
+    .fileBitmapSize     = OTA_MAX_BLOCK_BITMAP_SIZE
+};
+
 /**
  * These configurations are required. Throw compilation error if it is not
  * defined.
@@ -820,4 +927,237 @@ int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
 
     return ( status == true ) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+/*-----------------------------------------------------------*/
+/*-----------------------------------------------------------*/
+
+void otaEventBufferFree( OtaEventData_t * const pxBuffer )
+{
+    pxBuffer->bufferUsed = false;
+}
+
+/*-----------------------------------------------------------*/
+
+
+static void otaAppCallback( OtaJobEvent_t event,
+                            void * pData )
+{
+    OtaErr_t err = OtaErrUninitialized;
+    int ret;
+
+    switch( event )
+    {
+        case OtaJobEventActivate:
+            LogInfo( ( "Received OtaJobEventActivate callback from OTA Agent." ) );
+
+            /* Activate the new firmware image. */
+            OTA_ActivateNewImage();
+
+            /* Shutdown OTA Agent, if it is required that the unsubscribe operations are not
+             * performed while shutting down please set the second parameter to 0 instead of 1. */
+            OTA_Shutdown( 0, 1 );
+
+            /* Requires manual activation of new image.*/
+            LogError( ( "New image activation failed." ) );
+
+            break;
+
+        case OtaJobEventFail:
+            LogInfo( ( "Received OtaJobEventFail callback from OTA Agent." ) );
+
+            /* Nothing special to do. The OTA agent handles it. */
+            break;
+
+        case OtaJobEventStartTest:
+
+            /* This demo just accepts the image since it was a good OTA update and networking
+             * and services are all working (or we would not have made it this far). If this
+             * were some custom device that wants to test other things before validating new
+             * image, this would be the place to kick off those tests before calling
+             * OTA_SetImageState() with the final result of either accepted or rejected. */
+
+            LogInfo( ( "Received OtaJobEventStartTest callback from OTA Agent." ) );
+            err = OTA_SetImageState( OtaImageStateAccepted );
+
+            if( err == OtaErrNone ) {
+                /* Erasing passive partition */
+                ret = otaPal_EraseLastBootPartition();
+                if (ret != ESP_OK) {
+                   ESP_LOGE("otaAppCallback", "Failed to erase last boot partition! (%d)", ret);
+                }
+            } else {
+                LogError( ( " Failed to set image state as accepted." ) );
+            }
+
+            break;
+
+        case OtaJobEventProcessed:
+            LogDebug( ( "Received OtaJobEventProcessed callback from OTA Agent." ) );
+
+            if( pData != NULL )
+            {
+                otaEventBufferFree( ( OtaEventData_t * ) pData );
+            }
+
+            break;
+
+        case OtaJobEventSelfTestFailed:
+            LogDebug( ( "Received OtaJobEventSelfTestFailed callback from OTA Agent." ) );
+
+            /* Requires manual activation of previous image as self-test for
+             * new image downloaded failed.*/
+            LogError( ( "Self-test failed, shutting down OTA Agent." ) );
+
+            /* Shutdown OTA Agent, if it is required that the unsubscribe operations are not
+             * performed while shutting down please set the second parameter to 0 instead of 1. */
+            OTA_Shutdown( 0, 1 );
+
+            break;
+
+        default:
+            LogDebug( ( "Received invalid callback event from OTA Agent." ) );
+    }
+}
+
+/*-----------------------------------------------------------*/
+static void setOtaInterfaces( OtaInterfaces_t * pOtaInterfaces )
+{
+    /* Initialize OTA library OS Interface. */
+    pOtaInterfaces->os.event.init = OtaInitEvent_FreeRTOS;
+    pOtaInterfaces->os.event.send = OtaSendEvent_FreeRTOS;
+    pOtaInterfaces->os.event.recv = OtaReceiveEvent_FreeRTOS;
+    pOtaInterfaces->os.event.deinit = OtaDeinitEvent_FreeRTOS;
+    pOtaInterfaces->os.timer.start = OtaStartTimer_FreeRTOS;
+    pOtaInterfaces->os.timer.stop = OtaStopTimer_FreeRTOS;
+    pOtaInterfaces->os.timer.delete = OtaDeleteTimer_FreeRTOS;
+    pOtaInterfaces->os.mem.malloc = Malloc_FreeRTOS;
+    pOtaInterfaces->os.mem.free = Free_FreeRTOS;
+
+    /* Initialize the OTA library MQTT Interface.*/
+    //pOtaInterfaces->mqtt.subscribe = mqttSubscribe;
+    //pOtaInterfaces->mqtt.publish = mqttPublish;
+    //pOtaInterfaces->mqtt.unsubscribe = mqttUnsubscribe;
+
+    /* Initialize the OTA library PAL Interface.*/
+    pOtaInterfaces->pal.getPlatformImageState = otaPal_GetPlatformImageState;
+    pOtaInterfaces->pal.setPlatformImageState = otaPal_SetPlatformImageState;
+    pOtaInterfaces->pal.writeBlock = otaPal_WriteBlock;
+    pOtaInterfaces->pal.activate = otaPal_ActivateNewImage;
+    pOtaInterfaces->pal.closeFile = otaPal_CloseFile;
+    pOtaInterfaces->pal.reset = otaPal_ResetDevice;
+    pOtaInterfaces->pal.abort = otaPal_Abort;
+    pOtaInterfaces->pal.createFile = otaPal_CreateFileForRx;
+}
+
+/*-----------------------------------------------------------*/
+
+static void * otaTask( void * pParam )
+{
+    /* Calling OTA agent task. */
+    LogInfo( ( "Calling OTA agent task." ) );
+    OTA_EventProcessingTask( pParam );
+    LogInfo( ( "OTA Agent stopped." ) );
+    return NULL;
+}
+/*-----------------------------------------------------------*/
+
+#define CLIENT_IDENTIFIER_PREFIX "ESP32Thing_"
+#define MAX_CLIENT_IDENTIFIER_LENGTH  (sizeof(CLIENT_IDENTIFIER_PREFIX) + sizeof(CLIENT_IDENTIFIER) - 1)
+
+#define OTA_TASK_STACK_SIZE 4096
+#define OTA_TASK_PRIORITY   5
+
+int startOTADemo( void )
+{
+    /* Status indicating a successful demo or not. */
+    int returnStatus = EXIT_SUCCESS;
+
+    /* coreMQTT library return status. */
+    MQTTStatus_t mqttStatus = MQTTBadParameter;
+
+    /* OTA library return status. */
+    OtaErr_t otaRet = OtaErrNone;
+
+    /* OTA Agent state returned from calling OTA_GetAgentState.*/
+    OtaState_t state = OtaAgentStateStopped;
+
+    /* OTA event message used for sending event to OTA Agent.*/
+    OtaEventMsg_t eventMsg = { 0 };
+
+    /* OTA library packet statistics per job.*/
+    OtaAgentStatistics_t otaStatistics = { 0 };
+
+    /* OTA interface context required for library interface functions.*/
+    OtaInterfaces_t otaInterfaces;
+
+    /* Maximum time to wait for the OTA agent to get suspended. */
+    int16_t suspendTimeout;
+
+    /* Set OTA Library interfaces.*/
+    setOtaInterfaces( &otaInterfaces );
+
+    /* Set OTA Code Signing Certificate */
+    if( !otaPal_SetCodeSigningCertificate( pcAwsCodeSigningCertPem ) )
+    {
+        LogError( ( "Failed to allocate memory for Code Signing Certificate" ) );
+        returnStatus = EXIT_FAILURE;
+    }
+
+    LogInfo( ( "OTA over MQTT demo, Application version %u.%u.%u",
+               appFirmwareVersion.u.x.major,
+               appFirmwareVersion.u.x.minor,
+               appFirmwareVersion.u.x.build ) );
+
+    /****************************** Init OTA Library. ******************************/
+
+    if( returnStatus == EXIT_SUCCESS )
+    {
+        char fullClientIdentifier[MAX_CLIENT_IDENTIFIER_LENGTH];
+        snprintf(fullClientIdentifier, sizeof(fullClientIdentifier), "%s%s", CLIENT_IDENTIFIER_PREFIX, CLIENT_IDENTIFIER);
+
+        if( ( otaRet = OTA_Init( &otaBuffer,
+                                 &otaInterfaces,
+                                 (const uint8_t *)(fullClientIdentifier),
+                                 otaAppCallback ) ) != OtaErrNone )
+        {
+            LogError( ( "Failed to initialize OTA Agent, exiting = %u.",
+                        otaRet ) );
+
+            returnStatus = EXIT_FAILURE;
+        }
+        else 
+        {
+            LogInfo( ( "Successfully init OTA Agent." ) );
+        }
+    }
+
+    /****************************** Create OTA Task. ******************************/
+
+    if( returnStatus == EXIT_SUCCESS )
+    {
+        ESP_LOGI("TAG", "Free memory: %"PRIu32" bytes", esp_get_free_heap_size());
+
+        BaseType_t taskStatus = xTaskCreate( otaTask,
+                                             "OtaTask",
+                                             OTA_TASK_STACK_SIZE,
+                                             NULL,
+                                             OTA_TASK_PRIORITY,
+                                             NULL );
+
+        if( taskStatus != pdPASS )
+        {            
+            LogError( ( "Failed to create OTA task." ) );
+            returnStatus = EXIT_FAILURE;
+        }
+        else
+        {
+            LogInfo( ( "Successfully created OTA task." ) );
+        }
+    }
+   
+
+    /****************************** OTA Demo loop. ******************************/
+
+    return returnStatus;
+}
+
 /*-----------------------------------------------------------*/

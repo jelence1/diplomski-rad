@@ -215,4 +215,18 @@
 #include "core_mqtt.h"
 #define MQTT_LIB    "core-mqtt@" MQTT_LIBRARY_VERSION
 
+/**
+ * @brief The name of the library used and its version, following an "@"
+ * symbol.
+ */
+#define OTA_LIB                   "otalib@1.0.0"
+
+/**
+ * @brief Configure application version.
+ */
+
+#define APP_VERSION_MAJOR         0
+#define APP_VERSION_MINOR         0
+#define APP_VERSION_BUILD         0
+
 #endif /* ifndef DEMO_CONFIG_H_ */

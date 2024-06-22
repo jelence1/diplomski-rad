@@ -56,6 +56,7 @@
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
+int startOTADemo(void);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -935,6 +936,10 @@ void app_main()
     if (fleet_prov_status == EXIT_FAILURE) return;
 
     moisture_init();
+
+    fleet_prov_status = startOTADemo();
+
+    if (fleet_prov_status == EXIT_FAILURE) return;
 
     xTaskCreate(publish_message_task,   // Task function
             "publish_message_task",     // Name of the task
