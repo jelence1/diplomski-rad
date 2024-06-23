@@ -31,17 +31,17 @@
  * therefore the code for MQTT connections are placed in another file (shadow_demo_helpers.c)
  * to make it easy to read the code using Device Shadow library.
  *
- * This example assumes there is a powerOn state in the device shadow. It does the
+ * This example assumes there is a heap state in the device shadow. It does the
  * following operations:
  * 1. Establish a MQTT connection by using the helper functions in shadow_demo_helpers.c.
  * 2. Assemble strings for the MQTT topics of device shadow, by using macros defined by the Device Shadow library.
  * 3. Subscribe to those MQTT topics by using helper functions in shadow_demo_helpers.c.
- * 4. Publish a desired state of powerOn by using helper functions in shadow_demo_helpers.c.  That will cause
+ * 4. Publish a desired state of heap by using helper functions in shadow_demo_helpers.c.  That will cause
  * a delta message to be sent to device.
  * 5. Handle incoming MQTT messages in eventCallback, determine whether the message is related to the device
  * shadow by using a function defined by the Device Shadow library (Shadow_MatchTopicString). If the message is a
  * device shadow delta message, set a flag for the main function to know, then the main function will publish
- * a second message to update the reported state of powerOn.
+ * a second message to update the reported state of heap.
  * 6. Handle incoming message again in eventCallback. If the message is from update/accepted, verify that it
  * has the same clientToken as previously published in the update message. That will mark the end of the demo.
  */
@@ -70,6 +70,9 @@
 /* Clock for timer. */
 #include "clock.h"
 
+#include "esp_system.h"
+
+
 /**
  * @brief Format string representing a Shadow document with a "desired" state.
  *
@@ -77,7 +80,7 @@
  * {
  *   "state": {
  *     "desired": {
- *       "powerOn": 1
+ *       "heap": 1
  *     }
  *   },
  *   "clientToken": "021909"
@@ -91,10 +94,10 @@
     "{"                         \
     "\"state\":{"               \
     "\"desired\":{"             \
-    "\"powerOn\":%01d"          \
+    "\"heap\":%u"               \
     "}"                         \
     "},"                        \
-    "\"clientToken\":\"%06lu\"" \
+    "\"clientToken\":\"%s\""    \
     "}"
 
 /**
@@ -111,7 +114,7 @@
  *
  * In your own application, you could calculate the size of the json doc in this way.
  */
-#define SHADOW_DESIRED_JSON_LENGTH    ( sizeof( SHADOW_DESIRED_JSON ) - 3 )
+#define SHADOW_DESIRED_JSON_LENGTH    201
 
 /**
  * @brief Format string representing a Shadow document with a "reported" state.
@@ -120,7 +123,7 @@
  * {
  *   "state": {
  *     "reported": {
- *       "powerOn": 1
+ *       "heap": 1
  *     }
  *   },
  *   "clientToken": "021909"
@@ -134,10 +137,10 @@
     "{"                         \
     "\"state\":{"               \
     "\"reported\":{"            \
-    "\"powerOn\":%01d"          \
+    "\"heap\":%u"               \
     "}"                         \
     "},"                        \
-    "\"clientToken\":\"%06lu\"" \
+    "\"clientToken\":\"%s\""    \
     "}"
 
 /**
@@ -147,7 +150,7 @@
  * its full size is known at compile-time by pre-calculation. Users could refer to
  * the way how to calculate the actual length in #SHADOW_DESIRED_JSON_LENGTH.
  */
-#define SHADOW_REPORTED_JSON_LENGTH    ( sizeof( SHADOW_REPORTED_JSON ) - 3 )
+#define SHADOW_REPORTED_JSON_LENGTH    201
 
 /**
  * @brief The maximum number of times to run the loop in this demo.
@@ -179,12 +182,12 @@
 /*-----------------------------------------------------------*/
 
 /**
- * @brief The simulated device current power on state.
+ * @brief The simulated device current heap state.
  */
-static uint32_t currentPowerOnState = 0;
+static uint32_t currentHeap = 0;
 
 /**
- * @brief The flag to indicate the device current power on state changed.
+ * @brief The flag to indicate the device current heap size changed.
  */
 static bool stateChanged = false;
 
@@ -193,7 +196,7 @@ static bool stateChanged = false;
  * the response from cloud (accepted/rejected), remember the clientToken and
  * use it to match with the response.
  */
-static uint32_t clientToken = 0U;
+static char clientToken[128] = CLIENT_IDENTIFIER;
 
 /**
  * @brief Indicator that an error occurred during the MQTT event callback. If an
@@ -238,8 +241,8 @@ static void eventCallback( MQTTContext_t * pMqttContext,
 /**
  * @brief Process payload from /update/delta topic.
  *
- * This handler examines the version number and the powerOn state. If powerOn
- * state has changed, it sets a flag for the main function to take further actions.
+ * This handler examines the version number and the heap size. If heap
+ * size has changed, it sets a flag for the main function to take further actions.
  *
  * @param[in] pPublishInfo Deserialized publish info pointer for the incoming
  * packet.
@@ -341,7 +344,7 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
 {
     static uint32_t currentVersion = 0; /* Remember the latestVersion # we've ever received */
     uint32_t version = 0U;
-    uint32_t newState = 0U;
+    uint32_t newHeap = 0U;
     char * outValue = NULL;
     uint32_t outValueLength = 0U;
     JSONStatus_t result = JSONSuccess;
@@ -356,10 +359,10 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
      *      "version": 12,
      *      "timestamp": 1595437367,
      *      "state": {
-     *          "powerOn": 1
+     *          "heap": 1
      *      },
      *      "metadata": {
-     *          "powerOn": {
+     *          "heap": {
      *          "timestamp": 1595437367
      *          }
      *      },
@@ -404,18 +407,18 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
 
     LogInfo( ( "version:%"PRIu32", currentVersion:%"PRIu32" \r\n", version, currentVersion ) );
 
-    /* When the version is much newer than the on we retained, that means the powerOn
+    /* When the version is much newer than the on we retained, that means the heap
      * state is valid for us. */
     if( version > currentVersion )
     {
         /* Set to received version as the current version. */
         currentVersion = version;
 
-        /* Get powerOn state from json documents. */
+        /* Get heap state from json documents. */
         result = JSON_Search( ( char * ) pPublishInfo->pPayload,
                               pPublishInfo->payloadLength,
-                              "state.powerOn",
-                              sizeof( "state.powerOn" ) - 1,
+                              "state.heap",
+                              sizeof( "state.heap" ) - 1,
                               &outValue,
                               ( size_t * ) &outValueLength );
     }
@@ -431,17 +434,17 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
 
     if( result == JSONSuccess )
     {
-        /* Convert the powerOn state value to an unsigned integer value. */
-        newState = ( uint32_t ) strtoul( outValue, NULL, 10 );
+        /* Convert the heap state value to an unsigned integer value. */
+        newHeap = ( uint32_t ) strtoul( outValue, NULL, 10 );
 
-        LogInfo( ( "The new power on state newState:%"PRIu32", currentPowerOnState:%"PRIu32" \r\n",
-                   newState, currentPowerOnState ) );
+        LogInfo( ( "The new heap state newState:%"PRIu32", currentHeapState:%"PRIu32" \r\n",
+                   newHeap, currentHeap ) );
 
-        if( newState != currentPowerOnState )
+        if( newHeap != currentHeap )
         {
-            /* The received powerOn state is different from the one we retained before, so we switch them
+            /* The received heap state is different from the one we retained before, so we switch them
              * and set the flag. */
-            currentPowerOnState = newState;
+            currentHeap = newHeap;
 
             /* State change will be handled in main(), where we will publish a "reported"
              * state to the device shadow. We do not do it here because we are inside of
@@ -452,7 +455,7 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
     }
     else
     {
-        LogError( ( "No powerOn in json document!!" ) );
+        LogError( ( "No heap in json document!!" ) );
         eventCallbackError = true;
     }
 }
@@ -463,7 +466,7 @@ static void updateAcceptedHandler( MQTTPublishInfo_t * pPublishInfo )
 {
     char * outValue = NULL;
     uint32_t outValueLength = 0U;
-    uint32_t receivedToken = 0U;
+    char receivedToken[128];
     JSONStatus_t result = JSONSuccess;
 
     assert( pPublishInfo != NULL );
@@ -478,12 +481,12 @@ static void updateAcceptedHandler( MQTTPublishInfo_t * pPublishInfo )
      *  {
      *      "state": {
      *          "reported": {
-     *          "powerOn": 1
+     *          "heap": 1
      *          }
      *      },
      *      "metadata": {
      *          "reported": {
-     *          "powerOn": {
+     *          "heap": {
      *              "timestamp": 1596573647
      *          }
      *          }
@@ -520,21 +523,21 @@ static void updateAcceptedHandler( MQTTPublishInfo_t * pPublishInfo )
                    outValue ) );
 
         /* Convert the code to an unsigned integer value. */
-        receivedToken = ( uint32_t ) strtoul( outValue, NULL, 10 );
+        memcpy(receivedToken, outValue, outValueLength);
 
-        LogInfo( ( "receivedToken:%"PRIu32", clientToken:%"PRIu32" \r\n", receivedToken, clientToken ) );
+        LogInfo( ( "receivedToken:%s, clientToken:%s \r\n", receivedToken, clientToken ) );
 
         /* If the clientToken in this update/accepted message matches the one we
          * published before, it means the device shadow has accepted our latest
          * reported state. We are done. */
-        if( receivedToken == clientToken )
+        if( strcmp (receivedToken, clientToken) == 0)
         {
             LogInfo( ( "Received response from the device shadow. Previously published "
-                       "update with clientToken=%"PRIu32" has been accepted. ", clientToken ) );
+                       "update with clientToken=%s has been accepted. ", clientToken ) );
         }
         else
         {
-            LogWarn( ( "The received clientToken=%"PRIu32" is not identical with the one=%"PRIu32" we sent "
+            LogWarn( ( "The received clientToken=%s is not identical with the one=%s we sent "
                        , receivedToken, clientToken ) );
         }
     }
@@ -803,8 +806,8 @@ int aws_iot_demo_main( int argc,
              */
             if( returnStatus == EXIT_SUCCESS )
             {
-                /* desired power on state . */
-                LogInfo( ( "Send desired power state with 1." ) );
+                /* desired heap size . */
+                LogInfo( ( "Send desired heap size." ) );
 
                 ( void ) memset( updateDocument,
                                  0x00,
@@ -812,13 +815,12 @@ int aws_iot_demo_main( int argc,
 
                 /* Keep the client token in global variable used to compare if
                  * the same token in /update/accepted. */
-                clientToken = ( Clock_GetTimeMs() % 1000000 );
 
                 snprintf( updateDocument,
                           SHADOW_DESIRED_JSON_LENGTH + 1,
                           SHADOW_DESIRED_JSON,
-                          ( int ) 1,
-                          ( long unsigned ) clientToken );
+                          ( int ) esp_get_free_heap_size(),
+                          clientToken );
 
                 returnStatus = PublishToTopic( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
                                                SHADOW_TOPIC_LEN_UPDATE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
@@ -837,20 +839,19 @@ int aws_iot_demo_main( int argc,
                 if( stateChanged == true )
                 {
                     /* Report the latest power state back to device shadow. */
-                    LogInfo( ( "Report to the state change: %"PRIu32"", currentPowerOnState ) );
+                    LogInfo( ( "Report to the state change: %"PRIu32"", currentHeap ) );
                     ( void ) memset( updateDocument,
                                      0x00,
                                      sizeof( updateDocument ) );
 
                     /* Keep the client token in global variable used to compare if
                      * the same token in /update/accepted. */
-                    clientToken = ( Clock_GetTimeMs() % 1000000 );
 
                     snprintf( updateDocument,
                               SHADOW_REPORTED_JSON_LENGTH + 1,
                               SHADOW_REPORTED_JSON,
-                              ( int ) currentPowerOnState,
-                              ( long unsigned ) clientToken );
+                              ( int ) currentHeap,
+                              clientToken );
 
                     returnStatus = PublishToTopic( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
                                                    SHADOW_TOPIC_LEN_UPDATE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
@@ -859,31 +860,10 @@ int aws_iot_demo_main( int argc,
                 }
                 else
                 {
-                    LogInfo( ( "No change from /update/delta, unsubscribe all shadow topics and disconnect from MQTT.\r\n" ) );
+                    LogInfo( ( "No change from /update/delta." ) );
                 }
             }
 
-            if( returnStatus == EXIT_SUCCESS )
-            {
-                LogInfo( ( "Start to unsubscribe shadow topics and disconnect from MQTT. \r\n" ) );
-                returnStatus = UnsubscribeFromTopic( SHADOW_TOPIC_STR_UPDATE_DELTA( THING_NAME, SHADOW_NAME ),
-                                                     SHADOW_TOPIC_LEN_UPDATE_DELTA( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
-            }
-
-            if( returnStatus == EXIT_SUCCESS )
-            {
-                returnStatus = UnsubscribeFromTopic( SHADOW_TOPIC_STR_UPDATE_ACC( THING_NAME, SHADOW_NAME ),
-                                                     SHADOW_TOPIC_LEN_UPDATE_ACC( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
-            }
-
-            if( returnStatus == EXIT_SUCCESS )
-            {
-                returnStatus = UnsubscribeFromTopic( SHADOW_TOPIC_STR_UPDATE_REJ( THING_NAME, SHADOW_NAME ),
-                                                     SHADOW_TOPIC_LEN_UPDATE_REJ( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
-            }
-
-            /* The MQTT session is always disconnected, even there were prior failures. */
-            returnStatus = DisconnectMqttSession();
         }
 
         /* This demo performs only Device Shadow operations. If matching the Shadow
