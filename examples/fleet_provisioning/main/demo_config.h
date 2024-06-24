@@ -215,4 +215,30 @@
 #include "core_mqtt.h"
 #define MQTT_LIB    "core-mqtt@" MQTT_LIBRARY_VERSION
 
+/**
+ * @brief Predefined thing name.
+ *
+ * This is the example predefine thing name and could be compiled in ROM code.
+ */
+#define THING_NAME           "ESP32Thing_" CONFIG_MQTT_CLIENT_IDENTIFIER
+
+/**
+ * @brief The length of #THING_NAME.
+ */
+#define THING_NAME_LENGTH    ( ( uint16_t ) ( sizeof( THING_NAME ) - 1 ) )
+
+/**
+ * @brief Predefined shadow name.
+ *
+ * Defaults to unnamed "Classic" shadow. Change to a custom string to use a named shadow.
+ */
+#ifndef SHADOW_NAME
+    #define SHADOW_NAME    SHADOW_NAME_CLASSIC
+#endif
+
+/**
+ * @brief The length of #SHADOW_NAME.
+ */
+#define SHADOW_NAME_LENGTH    ( ( uint16_t ) ( sizeof( SHADOW_NAME ) - 1 ) )
+
 #endif /* ifndef DEMO_CONFIG_H_ */

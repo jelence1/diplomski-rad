@@ -1134,8 +1134,8 @@ bool SubscribeToTopic( const char * pTopicFilter,
     /* Start with everything at 0. */
     ( void ) memset( ( void * ) pSubscriptionList, 0x00, sizeof( pSubscriptionList ) );
 
-    /* This example subscribes to only one topic and uses QOS0. */
-    pSubscriptionList[ 0 ].qos = MQTTQoS0;
+    /* This example subscribes to only one topic and uses QOS1. */
+    pSubscriptionList[ 0 ].qos = MQTTQoS1;
     pSubscriptionList[ 0 ].pTopicFilter = pTopicFilter;
     pSubscriptionList[ 0 ].topicFilterLength = topicFilterLength;
 
@@ -1166,11 +1166,11 @@ bool SubscribeToTopic( const char * pTopicFilter,
          * of receiving publish message before subscribe ack is zero; but application
          * must be ready to receive any packet. This demo uses MQTT_ProcessLoop to
          * receive packet from network. */
+        returnStatus = waitForPacketAck( pMqttContext,
+                                         globalSubscribePacketIdentifier,
+                                         MQTT_PROCESS_LOOP_TIMEOUT_MS );
         //(Jelena)
-        //returnStatus = waitForPacketAck( pMqttContext,
-        //                                 globalSubscribePacketIdentifier,
-        //                                 MQTT_PROCESS_LOOP_TIMEOUT_MS );
-        returnStatus = true;
+        //returnStatus = true;
     }
 
     return returnStatus;
@@ -1192,8 +1192,8 @@ bool UnsubscribeFromTopic( const char * pTopicFilter,
     /* Start with everything at 0. */
     ( void ) memset( ( void * ) pSubscriptionList, 0x00, sizeof( pSubscriptionList ) );
 
-    /* This example subscribes to only one topic and uses QOS0. */
-    pSubscriptionList[ 0 ].qos = MQTTQoS0;
+    /* This example subscribes to only one topic and uses QOS1. */
+    pSubscriptionList[ 0 ].qos = MQTTQoS1;
     pSubscriptionList[ 0 ].pTopicFilter = pTopicFilter;
     pSubscriptionList[ 0 ].topicFilterLength = topicFilterLength;
 
@@ -1220,11 +1220,11 @@ bool UnsubscribeFromTopic( const char * pTopicFilter,
         /* Process incoming packet from the broker. Acknowledgment for unsubscribe
          * operation ( UNSUBACK ) will be received here. This demo uses
          * MQTT_ProcessLoop to receive packet from network. */
-        //returnStatus = waitForPacketAck( pMqttContext,
-        //                                 globalUnsubscribePacketIdentifier,
-        //                                 MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        returnStatus = waitForPacketAck( pMqttContext,
+                                         globalUnsubscribePacketIdentifier,
+                                         MQTT_PROCESS_LOOP_TIMEOUT_MS );
         //(Jelena)
-        returnStatus = true;
+        //returnStatus = true;
     }
 
     return returnStatus;
@@ -1331,4 +1331,54 @@ bool ProcessLoopWithTimeout( void )
 
     return returnStatus;
 }
+/*-----------------------------------------------------------*/
+
+/*-----------------------------------------------------------*/
+
+void HandleOtherIncomingPacket( MQTTPacketInfo_t * pPacketInfo,
+                                uint16_t packetIdentifier )
+{
+    /* Handle other packets. */
+    switch( pPacketInfo->type )
+    {
+        case MQTT_PACKET_TYPE_SUBACK:
+            LogInfo( ( "MQTT_PACKET_TYPE_SUBACK." ) );
+            /* Make sure ACK packet identifier matches with Request packet identifier. */
+            assert( globalSubscribePacketIdentifier == packetIdentifier );
+            /* Update the global ACK packet identifier. */
+            globalAckPacketIdentifier = packetIdentifier;
+            break;
+
+        case MQTT_PACKET_TYPE_UNSUBACK:
+            LogInfo( ( "MQTT_PACKET_TYPE_UNSUBACK." ) );
+            /* Make sure ACK packet identifier matches with Request packet identifier. */
+            assert( globalUnsubscribePacketIdentifier == packetIdentifier );
+            /* Update the global ACK packet identifier. */
+            globalAckPacketIdentifier = packetIdentifier;
+            break;
+
+        case MQTT_PACKET_TYPE_PINGRESP:
+
+            /* Nothing to be done from application as library handles
+             * PINGRESP. */
+            LogWarn( ( "PINGRESP should not be handled by the application "
+                       "callback when using MQTT_ProcessLoop." ) );
+            break;
+
+        case MQTT_PACKET_TYPE_PUBACK:
+            LogInfo( ( "PUBACK received for packet id %u.",
+                       packetIdentifier ) );
+            /* Cleanup publish packet when a PUBACK is received. */
+            cleanupOutgoingPublishWithPacketID( packetIdentifier );
+            /* Update the global ACK packet identifier. */
+            globalAckPacketIdentifier = packetIdentifier;
+            break;
+
+        /* Any other packet type is invalid. */
+        default:
+            LogError( ( "Unknown packet type received:(%02x).",
+                        pPacketInfo->type ) );
+    }
+}
+
 /*-----------------------------------------------------------*/

@@ -61,6 +61,7 @@
 /* POSIX includes. */
 #include <unistd.h>
 #include <errno.h>
+#include <inttypes.h>
 
 /* Demo config. */
 #include "demo_config.h"
@@ -78,6 +79,15 @@
 #include "fleet_provisioning_serializer.h"
 
 #include "cJSON.h"
+
+/* JSON API header. */
+#include "core_json.h"
+
+/* Shadow config include. */
+#include "shadow_config.h"
+
+/* SHADOW API header. */
+#include "shadow.h"
 
 /**
  * These configurations are required. Throw compilation error if it is not
@@ -163,6 +173,155 @@ typedef enum
     ResponseAccepted,
     ResponseRejected
 } ResponseStatus_t;
+
+/**
+ * @brief Format string representing a Shadow document with a "desired" state.
+ *
+ * The real json document will look like this:
+ * {
+ *   "state": {
+ *     "desired": {
+ *       "heap": 1
+ *     }
+ *   },
+ *   "clientToken": "021909"
+ * }
+ *
+ * Note the client token, which is optional for all Shadow updates. The client
+ * token must be unique at any given time, but may be reused once the update is
+ * completed. For this demo, a timestamp is used for a client token.
+ */
+#define SHADOW_DESIRED_JSON     \
+    "{"                         \
+    "\"state\":{"               \
+    "\"desired\":{"             \
+    "\"heap\":%u"               \
+    "}"                         \
+    "},"                        \
+    "\"clientToken\":\"%s\""    \
+    "}"
+
+/**
+ * @brief The expected size of #SHADOW_DESIRED_JSON.
+ *
+ * Because all the format specifiers in #SHADOW_DESIRED_JSON include a length,
+ * its full actual size is known by pre-calculation, here's the formula why
+ * the length need to minus 3:
+ * 1. The length of "%01d" is 4.
+ * 2. The length of %06lu is 5.
+ * 3. The actual length we will use in case 1. is 1 ( for the state of powerOn ).
+ * 4. The actual length we will use in case 2. is 6 ( for the clientToken length ).
+ * 5. Thus the additional size 3 = 4 + 5 - 1 - 6 + 1 (termination character).
+ *
+ * In your own application, you could calculate the size of the json doc in this way.
+ */
+#define SHADOW_DESIRED_JSON_LENGTH    201
+
+/**
+ * @brief Format string representing a Shadow document with a "reported" state.
+ *
+ * The real json document will look like this:
+ * {
+ *   "state": {
+ *     "reported": {
+ *       "heap": 1
+ *     }
+ *   },
+ *   "clientToken": "021909"
+ * }
+ *
+ * Note the client token, which is required for all Shadow updates. The client
+ * token must be unique at any given time, but may be reused once the update is
+ * completed. For this demo, a timestamp is used for a client token.
+ */
+#define SHADOW_REPORTED_JSON    \
+    "{"                         \
+    "\"state\":{"               \
+    "\"reported\":{"            \
+    "\"heap\":%u"               \
+    "}"                         \
+    "},"                        \
+    "\"clientToken\":\"%s\""    \
+    "}"
+
+/**
+ * @brief The expected size of #SHADOW_REPORTED_JSON.
+ *
+ * Because all the format specifiers in #SHADOW_REPORTED_JSON include a length,
+ * its full size is known at compile-time by pre-calculation. Users could refer to
+ * the way how to calculate the actual length in #SHADOW_DESIRED_JSON_LENGTH.
+ */
+#define SHADOW_REPORTED_JSON_LENGTH    201
+
+/**
+ * @brief The maximum number of times to run the loop in this demo.
+ *
+ * @note The demo loop is attempted to re-run only if it fails in an iteration.
+ * Once the demo loop succeeds in an iteration, the demo exits successfully.
+ */
+#ifndef SHADOW_MAX_DEMO_LOOP_COUNT
+    #define SHADOW_MAX_DEMO_LOOP_COUNT    ( 3 )
+#endif
+
+/**
+ * @brief Time in seconds to wait between retries of the demo loop if
+ * demo loop fails.
+ */
+#define DELAY_BETWEEN_DEMO_RETRY_ITERATIONS_S           ( 5 )
+
+/**
+ * @brief JSON key for response code that indicates the type of error in
+ * the error document received on topic `/delete/rejected`.
+ */
+#define SHADOW_DELETE_REJECTED_ERROR_CODE_KEY           "code"
+
+/**
+ * @brief Length of #SHADOW_DELETE_REJECTED_ERROR_CODE_KEY
+ */
+#define SHADOW_DELETE_REJECTED_ERROR_CODE_KEY_LENGTH    ( ( uint16_t ) ( sizeof( SHADOW_DELETE_REJECTED_ERROR_CODE_KEY ) - 1 ) )
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief The simulated device current heap state.
+ */
+static uint32_t currentHeap = 0;
+
+/**
+ * @brief The flag to indicate the device current heap size changed.
+ */
+static bool stateChanged = false;
+
+/**
+ * @brief When we send an update to the device shadow, and if we care about
+ * the response from cloud (accepted/rejected), remember the clientToken and
+ * use it to match with the response.
+ */
+static char clientToken[128] = CLIENT_IDENTIFIER;
+
+/**
+ * @brief Indicator that an error occurred during the MQTT event callback. If an
+ * error occurred during the MQTT event callback, then the demo has failed.
+ */
+static bool eventCallbackError = false;
+
+/**
+ * @brief Status of the response of Shadow delete operation from AWS IoT
+ * message broker.
+ */
+static bool deleteResponseReceived = false;
+
+/**
+ * @brief Status of the Shadow delete operation.
+ *
+ * The Shadow delete status will be updated by the incoming publishes on the
+ * MQTT topics for delete acknowledgement from AWS IoT message broker
+ * (accepted/rejected). Shadow document is considered to be deleted if an
+ * incoming publish is received on `/delete/accepted` topic or an incoming
+ * publish is received on `/delete/rejected` topic with error code 404. Code 404
+ * indicates that the Shadow document does not exist for the Thing yet.
+ */
+static bool shadowDeleted = false;
 
 /*-----------------------------------------------------------*/
 
@@ -820,4 +979,625 @@ int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
 
     return ( status == true ) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+/*-----------------------------------------------------------*/
+
+/*-----------------------------------------------------------*/
+
+static void deleteRejectedHandler( MQTTPublishInfo_t * pPublishInfo )
+{
+    JSONStatus_t result = JSONSuccess;
+    char * pOutValue = NULL;
+    uint32_t outValueLength = 0U;
+    long errorCode = 0L;
+
+    assert( pPublishInfo != NULL );
+    assert( pPublishInfo->pPayload != NULL );
+
+    LogInfo( ( "/delete/rejected json payload:%s.", ( const char * ) pPublishInfo->pPayload ) );
+
+    /* The payload will look similar to this:
+     * {
+     *    "code": error-code,
+     *    "message": "error-message",
+     *    "timestamp": timestamp,
+     *    "clientToken": "token"
+     * }
+     */
+
+    /* Make sure the payload is a valid json document. */
+    result = JSON_Validate( ( const char * ) pPublishInfo->pPayload,
+                            pPublishInfo->payloadLength );
+
+    if( result == JSONSuccess )
+    {
+        /* Then we start to get the version value by JSON keyword "version". */
+        result = JSON_Search( ( char * ) pPublishInfo->pPayload,
+                              pPublishInfo->payloadLength,
+                              SHADOW_DELETE_REJECTED_ERROR_CODE_KEY,
+                              SHADOW_DELETE_REJECTED_ERROR_CODE_KEY_LENGTH,
+                              &pOutValue,
+                              ( size_t * ) &outValueLength );
+    }
+    else
+    {
+        LogError( ( "The json document is invalid!!" ) );
+    }
+
+    if( result == JSONSuccess )
+    {
+        LogInfo( ( "Error code is: %.*s.",
+                   (int) outValueLength,
+                   pOutValue ) );
+
+        /* Convert the extracted value to an unsigned integer value. */
+        errorCode = strtoul( pOutValue, NULL, 10 );
+    }
+    else
+    {
+        LogError( ( "No error code in json document!!" ) );
+    }
+
+    LogInfo( ( "Error code:%ld.", errorCode ) );
+
+    /* Mark Shadow delete operation as a success if error code is 404. */
+    if( errorCode == 404UL )
+    {
+        shadowDeleted = true;
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
+{
+    static uint32_t currentVersion = 0; /* Remember the latestVersion # we've ever received */
+    uint32_t version = 0U;
+    uint32_t newHeap = 0U;
+    char * outValue = NULL;
+    uint32_t outValueLength = 0U;
+    JSONStatus_t result = JSONSuccess;
+
+    assert( pPublishInfo != NULL );
+    assert( pPublishInfo->pPayload != NULL );
+
+    LogInfo( ( "/update/delta json payload:%s.", ( const char * ) pPublishInfo->pPayload ) );
+
+    /* The payload will look similar to this:
+     * {
+     *      "version": 12,
+     *      "timestamp": 1595437367,
+     *      "state": {
+     *          "heap": 1
+     *      },
+     *      "metadata": {
+     *          "heap": {
+     *          "timestamp": 1595437367
+     *          }
+     *      },
+     *      "clientToken": "388062"
+     *  }
+     */
+
+    /* Make sure the payload is a valid json document. */
+    result = JSON_Validate( ( const char * ) pPublishInfo->pPayload,
+                            pPublishInfo->payloadLength );
+
+    if( result == JSONSuccess )
+    {
+        /* Then we start to get the version value by JSON keyword "version". */
+        result = JSON_Search( ( char * ) pPublishInfo->pPayload,
+                              pPublishInfo->payloadLength,
+                              "version",
+                              sizeof( "version" ) - 1,
+                              &outValue,
+                              ( size_t * ) &outValueLength );
+    }
+    else
+    {
+        LogError( ( "The json document is invalid!!" ) );
+        eventCallbackError = true;
+    }
+
+    if( result == JSONSuccess )
+    {
+        LogInfo( ( "version: %.*s",
+                   (int) outValueLength,
+                   outValue ) );
+
+        /* Convert the extracted value to an unsigned integer value. */
+        version = ( uint32_t ) strtoul( outValue, NULL, 10 );
+    }
+    else
+    {
+        LogError( ( "No version in json document!!" ) );
+        eventCallbackError = true;
+    }
+
+    LogInfo( ( "version:%"PRIu32", currentVersion:%"PRIu32" \r\n", version, currentVersion ) );
+
+    /* When the version is much newer than the on we retained, that means the heap
+     * state is valid for us. */
+    if( version > currentVersion )
+    {
+        /* Set to received version as the current version. */
+        currentVersion = version;
+
+        /* Get heap state from json documents. */
+        result = JSON_Search( ( char * ) pPublishInfo->pPayload,
+                              pPublishInfo->payloadLength,
+                              "state.heap",
+                              sizeof( "state.heap" ) - 1,
+                              &outValue,
+                              ( size_t * ) &outValueLength );
+    }
+    else
+    {
+        /* In this demo, we discard the incoming message
+         * if the version number is not newer than the latest
+         * that we've received before. Your application may use a
+         * different approach.
+         */
+        LogWarn( ( "The received version is smaller than current one!!" ) );
+    }
+
+    if( result == JSONSuccess )
+    {
+        /* Convert the heap state value to an unsigned integer value. */
+        newHeap = ( uint32_t ) strtoul( outValue, NULL, 10 );
+
+        LogInfo( ( "The new heap state newState:%"PRIu32", currentHeapState:%"PRIu32" \r\n",
+                   newHeap, currentHeap ) );
+
+        if( newHeap != currentHeap )
+        {
+            /* The received heap state is different from the one we retained before, so we switch them
+             * and set the flag. */
+            currentHeap = newHeap;
+
+            /* State change will be handled in main(), where we will publish a "reported"
+             * state to the device shadow. We do not do it here because we are inside of
+             * a callback from the MQTT library, so that we don't re-enter
+             * the MQTT library. */
+            stateChanged = true;
+        }
+    }
+    else
+    {
+        LogError( ( "No heap in json document!!" ) );
+        eventCallbackError = true;
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+static void updateAcceptedHandler( MQTTPublishInfo_t * pPublishInfo )
+{
+    char * outValue = NULL;
+    uint32_t outValueLength = 0U;
+    char receivedToken[128];
+    JSONStatus_t result = JSONSuccess;
+
+    assert( pPublishInfo != NULL );
+    assert( pPublishInfo->pPayload != NULL );
+
+    LogInfo( ( "/update/accepted json payload:%s.", ( const char * ) pPublishInfo->pPayload ) );
+
+    /* Handle the reported state with state change in /update/accepted topic.
+     * Thus we will retrieve the client token from the json document to see if
+     * it's the same one we sent with reported state on the /update topic.
+     * The payload will look similar to this:
+     *  {
+     *      "state": {
+     *          "reported": {
+     *          "heap": 1
+     *          }
+     *      },
+     *      "metadata": {
+     *          "reported": {
+     *          "heap": {
+     *              "timestamp": 1596573647
+     *          }
+     *          }
+     *      },
+     *      "version": 14698,
+     *      "timestamp": 1596573647,
+     *      "clientToken": "022485"
+     *  }
+     */
+
+    /* Make sure the payload is a valid json document. */
+    result = JSON_Validate( ( const char * ) pPublishInfo->pPayload,
+                            pPublishInfo->payloadLength );
+
+    if( result == JSONSuccess )
+    {
+        /* Get clientToken from json documents. */
+        result = JSON_Search( ( char * ) pPublishInfo->pPayload,
+                              pPublishInfo->payloadLength,
+                              "clientToken",
+                              sizeof( "clientToken" ) - 1,
+                              &outValue,
+                              ( size_t * ) &outValueLength );
+    }
+    else
+    {
+        LogError( ( "Invalid json documents !!" ) );
+        eventCallbackError = true;
+    }
+
+    if( result == JSONSuccess )
+    {
+        LogInfo( ( "clientToken: %.*s", (int) outValueLength,
+                   outValue ) );
+
+        /* Convert the code to an unsigned integer value. */
+        memcpy(receivedToken, outValue, outValueLength);
+
+        LogInfo( ( "receivedToken:%s, clientToken:%s \r\n", receivedToken, clientToken ) );
+
+        /* If the clientToken in this update/accepted message matches the one we
+         * published before, it means the device shadow has accepted our latest
+         * reported state. We are done. */
+        if( strcmp (receivedToken, clientToken) == 0)
+        {
+            LogInfo( ( "Received response from the device shadow. Previously published "
+                       "update with clientToken=%s has been accepted. ", clientToken ) );
+        }
+        else
+        {
+            LogWarn( ( "The received clientToken=%s is not identical with the one=%s we sent "
+                       , receivedToken, clientToken ) );
+        }
+    }
+    else
+    {
+        LogError( ( "No clientToken in json document!!" ) );
+        eventCallbackError = true;
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+/* This is the callback function invoked by the MQTT stack when it receives
+ * incoming messages. This function demonstrates how to use the Shadow_MatchTopicString
+ * function to determine whether the incoming message is a device shadow message
+ * or not. If it is, it handles the message depending on the message type.
+ */
+static void shadowCallback( MQTTContext_t * pMqttContext,
+                           MQTTPacketInfo_t * pPacketInfo,
+                           MQTTDeserializedInfo_t * pDeserializedInfo )
+{
+    ShadowMessageType_t messageType = ShadowMessageTypeMaxNum;
+    const char * pThingName = NULL;
+    uint8_t thingNameLength = 0U;
+    const char * pShadowName = NULL;
+    uint8_t shadowNameLength = 0U;
+    uint16_t packetIdentifier;
+
+    ( void ) pMqttContext;
+
+    assert( pDeserializedInfo != NULL );
+    assert( pMqttContext != NULL );
+    assert( pPacketInfo != NULL );
+
+    packetIdentifier = pDeserializedInfo->packetIdentifier;
+
+    /* Handle incoming publish. The lower 4 bits of the publish packet
+     * type is used for the dup, QoS, and retain flags. Hence masking
+     * out the lower bits to check if the packet is publish. */
+    if( ( pPacketInfo->type & 0xF0U ) == MQTT_PACKET_TYPE_PUBLISH )
+    {
+        assert( pDeserializedInfo->pPublishInfo != NULL );
+        LogInfo( ( "pPublishInfo->pTopicName:%s.", pDeserializedInfo->pPublishInfo->pTopicName ) );
+
+        /* Let the Device Shadow library tell us whether this is a device shadow message. */
+        if( SHADOW_SUCCESS == Shadow_MatchTopicString( pDeserializedInfo->pPublishInfo->pTopicName,
+                                                       pDeserializedInfo->pPublishInfo->topicNameLength,
+                                                       &messageType,
+                                                       &pThingName,
+                                                       &thingNameLength,
+                                                       &pShadowName,
+                                                       &shadowNameLength ) )
+        {
+            /* Upon successful return, the messageType has been filled in. */
+            if( messageType == ShadowMessageTypeUpdateDelta )
+            {
+                /* Handler function to process payload. */
+                updateDeltaHandler( pDeserializedInfo->pPublishInfo );
+            }
+            else if( messageType == ShadowMessageTypeUpdateAccepted )
+            {
+                /* Handler function to process payload. */
+                updateAcceptedHandler( pDeserializedInfo->pPublishInfo );
+            }
+            else if( messageType == ShadowMessageTypeUpdateDocuments )
+            {
+                LogInfo( ( "/update/documents json payload:%s.", ( const char * ) pDeserializedInfo->pPublishInfo->pPayload ) );
+            }
+            else if( messageType == ShadowMessageTypeUpdateRejected )
+            {
+                LogInfo( ( "/update/rejected json payload:%s.", ( const char * ) pDeserializedInfo->pPublishInfo->pPayload ) );
+            }
+            else if( messageType == ShadowMessageTypeDeleteAccepted )
+            {
+                LogInfo( ( "Received an MQTT incoming publish on /delete/accepted topic." ) );
+                shadowDeleted = true;
+                deleteResponseReceived = true;
+            }
+            else if( messageType == ShadowMessageTypeDeleteRejected )
+            {
+                /* Handler function to process payload. */
+                deleteRejectedHandler( pDeserializedInfo->pPublishInfo );
+                deleteResponseReceived = true;
+            }
+            else
+            {
+                LogInfo( ( "Other message type:%d !!", messageType ) );
+            }
+        }
+        else
+        {
+            LogError( ( "Shadow_MatchTopicString parse failed:%s !!", ( const char * ) pDeserializedInfo->pPublishInfo->pTopicName ) );
+            eventCallbackError = true;
+        }
+    }
+    else
+    {
+        HandleOtherIncomingPacket( pPacketInfo, packetIdentifier );
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Entry point of shadow demo.
+ *
+ * This main function demonstrates how to use the macros provided by the
+ * Device Shadow library to assemble strings for the MQTT topics defined
+ * by AWS IoT Device Shadow. Named shadow topic strings differ from unnamed
+ * ("Classic") topic strings as indicated by the tokens within square brackets.
+ *
+ * The main function uses these macros for topics to subscribe to:
+ * - SHADOW_TOPIC_STR_UPDATE_DELTA for "$aws/things/thingName/shadow[/name/shadowname]/update/delta"
+ * - SHADOW_TOPIC_STR_UPDATE_ACC for "$aws/things/thingName/shadow[/name/shadowname]/update/accepted"
+ * - SHADOW_TOPIC_STR_UPDATE_REJ for "$aws/things/thingName/shadow[/name/shadowname]/update/rejected"
+ *
+ * It also uses these macros for topics to publish to:
+ * - SHADOW_TOPIC_STR_DELETE for "$aws/things/thingName/shadow[/name/shadowname]/delete"
+ * - SHADOW_TOPIC_STR_UPDATE for "$aws/things/thingName/shadow[/name/shadowname]/update"
+ *
+ * The helper functions this demo uses for MQTT operations have internal
+ * loops to process incoming messages. Those are not the focus of this demo
+ * and therefore, are placed in a separate file shadow_demo_helpers.c.
+ */
+void device_shadow_main(void)
+{
+    int status = false;
+    int demoRunCount = 0;
+
+    /* A buffer containing the update document. It has static duration to prevent
+     * it from being placed on the call stack. */
+    static char updateDocument[ SHADOW_REPORTED_JSON_LENGTH + 1 ] = { 0 };
+
+    do
+    {
+
+        /* Reset the shadow delete status flags. */
+        deleteResponseReceived = false;
+        shadowDeleted = false;
+
+        LogInfo( ( "First of all, try to delete any Shadow document in the cloud." ) );
+
+        /* First of all, try to delete any Shadow document in the cloud.
+            * Try to subscribe to `/delete/accepted` and `/delete/rejected` topics. */
+        status = SubscribeToTopic( SHADOW_TOPIC_STR_DELETE_ACC( THING_NAME, SHADOW_NAME ),
+                                             SHADOW_TOPIC_LEN_DELETE_ACC( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+        
+        if( status == true )
+        {
+            /* Try to subscribe to `/delete/rejected` topic. */
+            LogInfo( ( "Try to subscribe to `/delete/accepted` and `/delete/rejected` topics." ) );
+            status = SubscribeToTopic( SHADOW_TOPIC_STR_DELETE_REJ( THING_NAME, SHADOW_NAME ),
+                                                 SHADOW_TOPIC_LEN_DELETE_REJ( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+        }
+
+        if( status == true )
+        {
+            /* Publish to Shadow `delete` topic to attempt to delete the
+                * Shadow document if exists. */
+            LogInfo( ( "Publish to Shadow `delete` topic to attempt to delete the shadow doc." ) );
+            LogInfo( ( "THING_NAME: %s", THING_NAME ) );
+            status = PublishToTopic( SHADOW_TOPIC_STR_DELETE( THING_NAME, SHADOW_NAME ),
+                                               SHADOW_TOPIC_LEN_DELETE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
+                                               updateDocument,
+                                               0U );
+        }
+
+        /* Unsubscribe from the `/delete/accepted` and 'delete/rejected` topics.*/
+        if( status == true )
+        {
+            LogInfo( ( "Publish to Shadow `delete` topic to attempt to delete the shadow doc." ) );
+            status = UnsubscribeFromTopic( SHADOW_TOPIC_STR_DELETE_ACC( THING_NAME, SHADOW_NAME ),
+                                                     SHADOW_TOPIC_LEN_DELETE_ACC( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+        }
+
+        if( status == true )
+        {
+            status = UnsubscribeFromTopic( SHADOW_TOPIC_STR_DELETE_REJ( THING_NAME, SHADOW_NAME ),
+                                                     SHADOW_TOPIC_LEN_DELETE_REJ( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+        }
+
+        /* Check if an incoming publish on `/delete/accepted` or `/delete/rejected`
+         * topics. If a response is not received, mark the demo execution as a failure.*/
+        if( ( status == true ) && ( deleteResponseReceived != true ) )
+        {
+            LogError( ( "Failed to receive a response for Shadow delete." ) );
+            //status = false;
+            shadowDeleted = true;
+        }
+
+        /* Check if Shadow document delete was successful. A delete can be
+             * successful in cases listed below.
+             *  1. If an incoming publish is received on `/delete/accepted` topic.
+             *  2. If an incoming publish is received on `/delete/rejected` topic
+             *     with an error code 404. This indicates that a delete was
+             *     attempted when a Shadow document is not available for the
+             *     Thing. */
+        if( status == true )
+        {
+            if( shadowDeleted == false )
+            {
+                LogError( ( "Shadow delete operation failed." ) );
+                status = false;
+            }
+        }
+
+        /* Successfully connect to MQTT broker, the next step is
+            * to subscribe shadow topics. */
+        if( status == true )
+        {
+            status = SubscribeToTopic( SHADOW_TOPIC_STR_UPDATE_DELTA( THING_NAME, SHADOW_NAME ),
+                                                 SHADOW_TOPIC_LEN_UPDATE_DELTA( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+        }
+
+        if( status == true )
+        {
+            status = SubscribeToTopic( SHADOW_TOPIC_STR_UPDATE_ACC( THING_NAME, SHADOW_NAME ),
+                                                 SHADOW_TOPIC_LEN_UPDATE_ACC( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+        }
+
+        if( status == true )
+        {
+            status = SubscribeToTopic( SHADOW_TOPIC_STR_UPDATE_REJ( THING_NAME, SHADOW_NAME ),
+                                                 SHADOW_TOPIC_LEN_UPDATE_REJ( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+        }
+
+            /* This demo uses a constant #THING_NAME and #SHADOW_NAME known at compile time therefore
+             * we can use macros to assemble shadow topic strings.
+             * If the thing name or shadow name is only known at run time, then we could use the API
+             * #Shadow_AssembleTopicString to assemble shadow topic strings, here is the example for /update/delta:
+             *
+             * For /update/delta:
+             *
+             * #define SHADOW_TOPIC_MAX_LENGTH  (256U)
+             *
+             * ShadowStatus_t shadowStatus = SHADOW_SUCCESS;
+             * char topicBuffer[ SHADOW_TOPIC_MAX_LENGTH ] = { 0 };
+             * uint16_t bufferSize = SHADOW_TOPIC_MAX_LENGTH;
+             * uint16_t outLength = 0;
+             * const char thingName[] = { "TestThingName" };
+             * uint16_t thingNameLength  = ( sizeof( thingName ) - 1U );
+             * const char shadowName[] = { "TestShadowName" };
+             * uint16_t shadowNameLength  = ( sizeof( shadowName ) - 1U );
+             *
+             * shadowStatus = Shadow_AssembleTopicString( ShadowTopicStringTypeUpdateDelta,
+             *                                            thingName,
+             *                                            thingNameLength,
+             *                                            shadowName,
+             *                                            shadowNameLength,
+             *                                            & ( topicBuffer[ 0 ] ),
+             *                                            bufferSize,
+             *                                            & outLength );
+             */
+
+        /* Then we publish a desired state to the /update topic. Since we've deleted
+            * the device shadow at the beginning of the demo, this will cause a delta message
+            * to be published, which we have subscribed to.
+            * In many real applications, the desired state is not published by
+            * the device itself. But for the purpose of making this demo self-contained,
+            * we publish one here so that we can receive a delta message later.
+            */
+        if( status == true )
+        {
+            /* desired heap size . */
+            LogInfo( ( "Send desired heap size." ) );
+
+            ( void ) memset( updateDocument,
+                                0x00,
+                                sizeof( updateDocument ) );
+
+            /* Keep the client token in global variable used to compare if
+                * the same token in /update/accepted. */
+
+            snprintf( updateDocument,
+                        SHADOW_DESIRED_JSON_LENGTH + 1,
+                        SHADOW_DESIRED_JSON,
+                        ( int ) esp_get_free_heap_size(),
+                        clientToken );
+
+            status = PublishToTopic( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
+                                            SHADOW_TOPIC_LEN_UPDATE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
+                                            updateDocument,
+                                            ( SHADOW_DESIRED_JSON_LENGTH + 1 ) );
+        }
+
+        if( status == true )
+        {
+            /* Note that PublishToTopic already called MQTT_ProcessLoop,
+                * therefore responses may have been received and the eventCallback
+                * may have been called, which may have changed the stateChanged flag.
+                * Check if the state change flag has been modified or not. If it's modified,
+                * then we publish reported state to update topic.
+                */
+            if( stateChanged == true )
+            {
+                /* Report the latest power state back to device shadow. */
+                LogInfo( ( "Report to the state change: %"PRIu32"", currentHeap ) );
+                ( void ) memset( updateDocument,
+                                    0x00,
+                                    sizeof( updateDocument ) );
+
+                /* Keep the client token in global variable used to compare if
+                    * the same token in /update/accepted. */
+
+                snprintf( updateDocument,
+                            SHADOW_REPORTED_JSON_LENGTH + 1,
+                            SHADOW_REPORTED_JSON,
+                            ( int ) currentHeap,
+                            clientToken );
+
+                status = PublishToTopic( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
+                                                SHADOW_TOPIC_LEN_UPDATE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
+                                                updateDocument,
+                                                ( SHADOW_REPORTED_JSON_LENGTH + 1 ) );
+            }
+                else
+            {
+                LogInfo( ( "No change from /update/delta." ) );
+            }
+        }
+
+        /* This demo performs only Device Shadow operations. If matching the Shadow
+         * topic fails or there are failures in parsing the received JSON document,
+         * then this demo was not successful. */
+        if( eventCallbackError == true )
+        {
+            status = false;
+        }
+
+        /* Increment the demo run count. */
+        demoRunCount++;
+
+        if( status == true )
+        {
+            LogInfo( ( "Shadow iteration %d is successful.", demoRunCount ) );
+        }
+        /* Attempt to retry a failed iteration of demo for up to #SHADOW_MAX_DEMO_LOOP_COUNT times. */
+        else if( demoRunCount < SHADOW_MAX_DEMO_LOOP_COUNT )
+        {
+            LogWarn( ( "Shadow iteration %d failed. Retrying...", demoRunCount ) );
+            sleep( DELAY_BETWEEN_DEMO_RETRY_ITERATIONS_S );
+        }
+        /* Failed all #SHADOW_MAX_DEMO_LOOP_COUNT demo iterations. */
+        else
+        {
+            LogError( ( "All %d shadow iterations failed.", SHADOW_MAX_DEMO_LOOP_COUNT ) );
+            break;
+        }
+    } while( status != true );
+
+    //return status;
+}
+
 /*-----------------------------------------------------------*/

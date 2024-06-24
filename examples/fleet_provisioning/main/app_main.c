@@ -56,6 +56,7 @@
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
+void device_shadow_main(void);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -520,6 +521,7 @@ void publish_message_task(void *pvParameters) {
                 lvgl_port_unlock();
             }
         sendMessage(temperature, humidity, moisture);
+        device_shadow_main();
 
         }
 

@@ -111,4 +111,13 @@ bool PublishToTopic( const char * pTopic,
  */
 bool ProcessLoopWithTimeout( void );
 
+/**
+ * @brief Handle the incoming packet if it's not related to the device shadow.
+ *
+ * @param[in] pPacketInfo Packet Info pointer for the incoming packet.
+ * @param[in] packetIdentifier Packet identifier of the incoming packet.
+ */
+void HandleOtherIncomingPacket( MQTTPacketInfo_t * pPacketInfo,
+                                uint16_t packetIdentifier );
+
 #endif /* ifndef MQTT_OPERATIONS_H_ */

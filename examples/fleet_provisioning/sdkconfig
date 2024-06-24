@@ -2106,6 +2106,20 @@ CONFIG_FLEET_PROVISIONING_LOG_INFO=y
 # end of Fleet Provisioning
 
 #
+# Device Shadow
+#
+
+#
+# Logging
+#
+CONFIG_DEVICE_SHADOW_LOG_ERROR=y
+# CONFIG_DEVICE_SHADOW_LOG_WARN is not set
+CONFIG_DEVICE_SHADOW_LOG_INFO=y
+# CONFIG_DEVICE_SHADOW_LOG_DEBUG is not set
+# end of Logging
+# end of Device Shadow
+
+#
 # LVGL configuration
 #
 CONFIG_LV_CONF_SKIP=y
