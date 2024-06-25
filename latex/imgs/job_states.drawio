@@ -1,0 +1,133 @@
+<mxfile host="app.diagrams.net" modified="2024-06-25T16:46:23.075Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0" etag="97sHLTcAOBorEQSfpqef" version="24.6.3" type="device">
+  <diagram name="Page-1" id="atfX9vCoaSfUHxwNYO-p">
+    <mxGraphModel dx="1050" dy="538" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-2" target="EMMarIDWFnkgcPuYDCyC-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-2" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=offPageConnector;rounded=0;size=0.5;rotation=-90;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="160" y="118.75" width="40" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-3" value="SCHEDULED" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="140" y="153.75" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-7" target="EMMarIDWFnkgcPuYDCyC-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.969;exitY=0.318;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="150" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="360" y="100" />
+              <mxPoint x="170" y="100" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-7" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=offPageConnector;rounded=0;size=0.5;rotation=-90;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="360" y="113.75" width="40" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" target="EMMarIDWFnkgcPuYDCyC-13">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="360" y="189" as="sourcePoint" />
+            <mxPoint x="352.5" y="406.2" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="360" y="189" />
+              <mxPoint x="360" y="351" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-8" value="IN_PROGRESS" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="340" y="153.75" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-9" target="EMMarIDWFnkgcPuYDCyC-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-9" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=offPageConnector;rounded=0;size=0.5;rotation=-90;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="550" y="118.75" width="40" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-10" value="CANCELED" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="530" y="153.75" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;startArrow=classic;startFill=1;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="360" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-11" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=offPageConnector;rounded=0;size=0.5;rotation=-90;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="445" y="210" width="40" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-12" value="COMPLETED" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="425" y="245" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-13" target="EMMarIDWFnkgcPuYDCyC-43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-13" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=offPageConnector;rounded=0;size=0.3230769230769231;rotation=-90;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="577.5" y="270" width="52.5" height="162.5" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-14" value="DELETION_IN_PROGRESS" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="570" y="336.25" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-20" value="Sva su izvršavanja otkazana" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="690" y="153.75" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.981;entryY=0.409;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-11" target="EMMarIDWFnkgcPuYDCyC-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-32" target="EMMarIDWFnkgcPuYDCyC-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="EMMarIDWFnkgcPuYDCyC-32" target="EMMarIDWFnkgcPuYDCyC-7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="60" y="220" />
+              <mxPoint x="240" y="220" />
+              <mxPoint x="240" y="179" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-32" value="Kreiranje posla" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="30" y="153.75" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-38" value="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="370" y="123.75" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-39" value="2" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="485" y="218.75" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-41" value="3" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="577.5" y="123.75" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-42" value="4" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="620" y="290" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-43" value="Posao obrisan i uklonjen s platforme" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="720" y="336.25" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-45" value="U stanju SCHEDULED do zakazanog trenutka izvršenja" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="200" y="123.75" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-48" value="Posao je odmah spreman za izvršavanje" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="213.75" width="270" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-49" value="Nakon isteka vremenskog okvira održavanja, posao se vraća u stanje SCHEDULED do idućeg okvira" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="105" y="60" width="330" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-51" value="Ispunjeni kriteriji za otkazivanje posla" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="415" y="123.75" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-52" value="Sva su izvršavanja obavljena" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="365" y="200" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-53" value="Eksplicitno brisanje posla" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="590" y="243.75" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EMMarIDWFnkgcPuYDCyC-54" value="Eksplicitno brisanje posla" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="350" y="320" width="170" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

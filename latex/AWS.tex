@@ -176,11 +176,102 @@ Odjeljak \textit{resursi} u predlošku definira resurse koji su potrebni uređaj
 
 Valja napomenuti kako je moguće u korisničkom sučelju platforme odabrati sve parametre, te kreiranje vlastitog dokumenta u JSON formatu nije potrebno, nego se automatski generira iz korisničkog odabira u sučelju. 
 
+\subsection{AWS IoT Device Shadow}
+
+WIP opisati sve što postoji o sjeni uređaja u AWS-u. 
+
 \subsection{AWS IoT Jobs}
 
-\subsection{AWS IoT OTA}
+Pokretanje poslova u sklopu usluge AWS IoT Jobs, kao što je ranije spomenuto, služi za udaljene operacije na fizičkim uređajima povezanih s platformom. 
 
-\subsection{AWS IoT Device Shadow}
+Posao je udaljena operacija koja se šalje i izvodi na jednom ili više uređaja povezanih s uslugom AWS IoT. Primjerice, moguće je definirati posao koji upućuje skup uređaja da preuzmu i instaliraju aplikaciju ili pokreću ažuriranja, rotiraju certifikate te je moguće udaljeno rješavati nastale probleme na uređajima \engl{remote troubleshooting}. Da bi se kreirao posao, najprije je potrebno kreirati dokument posla \engl{job document} koji je opis udaljenih operacija koje će uređaji izvesti. Dokumenti posla sadrže informacije koje su potrebne uređajima za obavljanje posla te su u formatu JSON. Dokumenti se mogu pohraniti na platformu i posebno dohvaćati, no isto tako mogu se definirati uz samu naredbu koja izvršava posao. Pri kreiranju posla, potrebno je specificirati odredišne uređaje \engl{targets} koji trebaju izvršiti naredbe. Moguće je odabrati pojedinačne uređaje, ali i grupu uređaja. Usluga zatim pošalje poruku svakom uređaju da postoji posao dostupan za izvršavanje. Nakon kreiranja posla, dokument posla se postavlja na udaljene uređaje koje je potrebno ažurirati. Ciljni uređaj preuzima taj certifikat i time započinje izvršavanje posla. Izvodi operacije opisane u dokumentu i o napretku obavještava platformu. Broj izvršenja \engl{execution number} jedinstveni je identifikator izvršenja posla na određenom ciljnom uređaju. Usluga izvršavanja posla pruža naredbe za praćenje napretka izvršenja posla na uređaju kao i na svim uređajima. 
+
+Na temelju broja ponavljanja posla, razlikuju se dvije vrste poslova:
+\begin{enumerate}
+	\item jednokratni posao \engl{snapshot job}: posao se šalje svim odabranim ciljnim uređajima pri kreiranju posla, te nakon odrađivanja posla ili odgovora o nemogućnosti izvršenja, posao se smatra gotovim, 
+	\item kontinuirani posao \engl{continuous job}: definiran je na razini grupe stvari, te se pri dodavanjem svakog novog uređaja u grupu izvršava na dodanom uređaju. 
+\end{enumerate}
+
+Preporučljivo je poslove označiti kontinuiranima jer se tako omogućava izvršavanje posla na novododanim uređajima čak i nakon kreiranja posla. 
+
+Moguće je odrediti koliko se brzo ciljni uređaji obavještavaju o zakazanom izvršenju posla. To omogućuje stvaranje postupnog uvođenja \engl{staged rollout} radi boljeg upravljanja ažuriranjima, ponovnim pokretanjem i drugim operacijama. Konfiguraciju uvođenja moguće je izraditi koristeći statičku ili eksponencijalnu stopu uvođenja. Za navođenje maksimalnog broja uređaja koji se mogu obavijestiti u minuti, potrebno je koristiti statičku stopu. 
+
+Raspored poslova omogućuje raspoređivanje vremenskog okvira uvođenja dokumenta posla na sve ciljne uređaje. Osim toga, moguće je stvoriti vremenski okvir održavanja sa specifičnim datumima i vremenima unutar kojeg se dokument posla šalje na sve uređaje. Taj se vremenski okvir održavanja provodi na proizvoljnoj vremenskoj bazi, primjerice tjedno, ili pak na određene prilagođene datume koji se odaberu pri inicijalnom postavljanju posla. Samo se kontinuirani poslovi mogu izvršavati periodički tokom održavanja budući da se oni mogu ponavljati. Maksimalno trajanje ponavljajućeg vremenskog okvira održavanja je 23 sata i 50 minuta. Jednokratni poslovi također se mogu uvrstiti u raspored poslova, no njima nije omogućeno izvršavanje unutar vremenskog okvira održavanja, nego jednokratno u definiranom vremenskom trenutku. 
+
+Za zakazane poslove koji se izvršavaju tijekom prozora održavanja s ručno postavljenom učestalošću izvršavanja, učestalost odnosno frekvencija definira se izrazom u formatu posla \textit{cron}. U operacijskim sustavima tipa \textit{Unix}, posao tipa \textit{cron} jest zadatak koji se kreira pomoću alata \textit{cron}, što je alat za zakazivanje i automatizaciju budućih poslova \cite{cron}. Pomoću njih automatizira se održavanje sustava, nadziranje diska, kao i pravljenje sigurnosnih kopija. Poslovi tipa \textit{cron} imaju određenu sintaksu i strukturu koja omogućava da se izvršavanje skripti pravilno izvršava. Sintaksa tipa \textit{cron} sastoji se od pet obaveznih polja međusobno odvojenih razmakom. Tablica \ref{table:cron} prikazuje polja koja se moraju definirati. 
+
+\begin{table}[ht!]
+	\centering
+	\caption{Polja formata tipa \textit{cron} \cite{aws_docs}}
+	\begin{tabular}{|c| c| c|}
+		\hline
+		\rowcolor{lightblue}  
+		\textbf{Polje} & \textbf{Vrijednosti} & \textbf{Zamjenski znakovi} \\ \hline
+		Minuta & 0-59 & , - * / \\ \hline
+		Sat & 0-23 & , - * / \\ \hline
+		Dan u mjesecu & 1-31 & , - * ? / L W \\ \hline
+		Mjesec & 1-12 ili \textit{JAN-DEC} & , - * / \\ \hline
+		Dan u tjednu & 1-7 ili \textit{MON-SUN} & , - * ? L \# \\ \hline
+	\end{tabular}
+	\label{table:cron}
+\end{table}
+
+U tablici se isto tako nalazi stupac za zamjenske znakove. Zamjenski znakovi \engl{wildcards} služe upravo kao zamjena sa konkretnu vrijednost za ona polja čija vrijednost nije bitna u kontekstu izraza. Zarez se koristi za odvajanje više vrijednosti, crtica označava opseg od prve do posljednje definirane vrijednosti, a zvjezdica je zamjena za sve vrijednosti polja. Kosa crta označava pojedinačne inkremente, a upitnik navodi jedno ili drugo. Slovo \textit{L} označava posljednji dan u tjednu ili mjesecu, a \textit{W} radni dan. Ljestve specificiraju pojedinačnu instancu unutar mjeseca, primjerice svaki drugi ponedjeljak u mjesecu. U nastavku je primjer posla u formatu \textit{cron} koji se pokreće svake minute između 15:00 i 15:59, svaki drugi dan u mjesecu, no samo siječnju i veljači:
+
+\begin{lstlisting}[caption={Primjer formata tipa \textit{cron}}]
+// min hr day month weekday
+	* 15 2-30/2 JAN,FEB *
+\end{lstlisting}
+
+Moguće je postaviti otkazivanje uvođenja posla na temelju postavljenih kriterija. Poslovi se mogu otkazati ako je previše uređaja vratilo negativnu potvrdu o izvršenju posla, ili pak previše uređaja nije poslalo nikakav odgovor do isteka određenog vremenskog perioda. 
+
+Pri isteku vremena \engl{timeout} za posao šalje se obavijest pri neočekivano dugom stanju uređaja bez ažuriranja promjene. Postoje dvije vrste mjerača vremena: aktivni mjerači \engl{in-progress timers} te mjerači koraka \engl{step timers}. Aktivni mjerači vremena ne mogu se izmijeniti nakon njihova pokretanja, te služe za mjerenje vremena izvođenja trenutno aktivnih poslova i postavljanje statusa izvršenja posla. Isto tako, ovaj mjerač vremena vrijedi za sva izvršenja istog posla, bez obzira na uređaj. Ako je potrebno pratiti odnosno ažurirati samo jedno izvršenje posla, onda se koristi mjerač koraka. On nema utjecaja na aktivni mjerač vremena. Moguće je postaviti novu vrijednost mjerača koraka pri svakom ažuriranju izvršenja posla, odnosno mjeriti trajanje svakog koraka pri izvršenju posla. 
+
+Isto tako, moguće je pokrenuti ponovni pokušaj izvršenja posla kada posao ne uspije ili pak istekne maksimalno vrijeme izvršavanja posla. Moguće je imati najviše deset ponovnih pokušaja za izvršenje posla te se svaka iteracija može nadzirati i pratiti napredak izvršenja. 
+
+Dijagram na slici \ref{fig:job_states} prikazuje stanja posla koja se mijenjaju tokom pokušaja izvršenja posla na uređaju. Jedan posao istovremeno ima više izvršenja poslova na različitim uređajima, te se ovisno o uspješnom ili neuspješnom izvršenju svih poslova stanje samog posla mijenja. Posao se može naći u sljedećim stanjima:
+\begin{itemize}
+	\item \textit{SCHEDULED}: ovo stanje odnosi se isključivo na poslove koji se kontinuirano izvršavaju. Kada se pokrene posao koji ima specificirano vrijeme pokretanja i završetka, status posla ažurira se u \textit{SCHEDULED}. U trenutku početka vremenskog okvira održavanja, stanje posla promijenit će se u \textit{IN\_PROGRESS}.
+	\item \textit{IN\_PROGRESS}: tokom ovog stanja, posao se postupno šalje na sve ciljne uređaje u grupi. Po završetku vremenskog okvira održavanja kontinuiranog posla, posao se vraća iz ovog stanja natrag u stanje \textit{SCHEDULED}.
+	\item \textit{COMPLETED}: prijelazom u ovo stanje označava se kraj posla na ciljnom uređaju. Kontinuirani posao koji nema definirano početno i krajnje vrijeme izvršavanja nikad ne doseže ovo stanje, nego iz aktivnog stanja odnosno \textit{IN\_PROGRESS} prelazi u stanje \textit{SCHEDULED} gdje ponovno čeka sljedeću iteraciju izvršavanja. Kontinuirani poslovi s definiranim krajnjim vremenom po isteku tog vremena prelaze u stanje \textit{COMPLETED}. Kod jednokratnih poslova, posao prelazi u \textit{COMPLETED} kada sva izvršenja posla na svim uređajima dosegnu prekidno stanje. 
+	\item \textit{CANCELED}: posao prelazi u ovo stanje namjernim otkazivanjem posla. Tijekom otkazivanja, AWS počinje poništavati izvršenja prethodno kreiranih poslova.
+	\item \textit{DELETION\_IN\_PROGRESS}: posao prelazi u ovo stanje pokretanjem brisanja iz konzole platforme. Pri brisanju posla, usluga briše sva ranije kreirana izvršavanja tog posla. Brisanjem se posao u potpunosti uklanja s platforme. 
+\end{itemize}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.5]{imgs/job_states}
+	\caption{Različita stanja tijekom izvršavanja posla \cite{aws_docs}}
+	\label{fig:job_states}
+\end{figure}
+
+Postoje određena ograničenja na poslove i njihovo izvršavanje. Svi poslovi u stanju \textit{IN\_PROGRESS} smatraju se aktivnim poslovima za koje postoji limit. Ovo uključuje poslove koji ili uvode nova izvršavanja poslova ili poslove koji čekaju da uređaji dovrše postojeće izvršavanje. Ograničenje se odnosi na kontinuirane i jednokratne poslove. Poslovi u tijeku i poslovi koji poništavaju izvršenja prethodno stvorenih poslova istovremeni su i ubrajaju se u ograničenje istovremenosti poslova. Usluga može pokretati i otkazivati izvršenje poslova brzinom od tisuću uređaja u minuti. Svaki posao je istovremen i ubraja se u ograničenje istovremenosti poslova samo kratko vrijeme. Nakon što su izvršenja uvedena ili otkazana, posao više nije istovremen i ne ubraja se u ograničenje istovremenosti poslova. Moguće je iskoristiti istovremenost za kreiranje većeg broja poslova za vrijeme čekanja izvršenja postojećih poslova.
+
+Isto tako, postoje različita stanja izvršenja samog posla. Izvršenje posla odnosi se na jednu instancu pokretanja posla na određenom ciljnom uređaju, te skup svih izvršenja poslova na svim uređajima određuje stanje samog posla. Tablica \ref{table:job_exec_states} prikazuje sva stanja u kojima se može naći izvršenje nekog posla. Isto tako, u tablici je navedeno koje stanje može okinuti uređaj, a koje usluga. Označeno je i koja su stanja prekidna, odnosno označavaju završetak izvođenja posla. Stupac \textit{retry} odnosi se na mogućnost ponovnog pokušaja izvršenja posla nakon navedenog stanja. 
+
+\begin{table}[ht!]
+	\centering
+	\caption{Stanja izvršenja posla \cite{aws_docs}}
+	\begin{tabular}{|c| c| c| c| c|}
+		\hline
+		\rowcolor{lightblue}  
+		\textbf{Stanje} & \textbf{Pokrenuo uređaj?} & \textbf{Pokrenula usluga?} & \textbf{Prekidno?} & \textbf{\textit{Retry}?} \\ \hline
+		\textit{QUEUED} & Ne & Da & Ne & - \\ \hline
+		\textit{IN\_PROGRESS} & Da & Ne & Ne & - \\ \hline
+		\textit{SUCCEEDED} & Da & Ne & Da & - \\ \hline
+		\textit{FAILED} & Da & Ne & Da & Da \\ \hline
+		\textit{TIMED\_OUT} & Ne & Da & Da & Da \\ \hline
+		\textit{REJECTED} & Da & Ne & Da & Ne \\ \hline
+		\textit{REMOVED} & Ne & Da & Da & Ne \\ \hline
+		\textit{CANCELED} & Ne & Da & Da & Ne \\ \hline
+	\end{tabular}
+	\label{table:job_exec_states}
+\end{table}
+
+Kad usluga pošalje posao na ciljni uređaj, status izvršenja posla prelazi u \textit{QUEUED}. Posao stoji u stanju čekanja u redu sve dok uređaj ne primi izvršenje posla, pokrene ga i promijeni status u \textit{IN\_PROGRESS} koji zatim i pošalje na platformu. Isto tako, u slučaju da se posao otkaže ili se kriteriji otkazivanja posla ispune, status izvršenja posla prelazi u \textit{CANCELED}. Pri uspješnom izvršenju posla, uređaj šalje obavijest na platformu o uspješnosti, čime se status mijenja u \textit{SUCCEEDED}. Ako pak izvršenje posla bude neuspješno, prelazi u stanje \textit{FAILED} odakle ima priliku ponovnog izvršenja ako je tako naznačeno pri konfiguraciji samog posla. Stanje \textit{TIMED\_OUT} odnosi se na istek maksimalnog vremena izvođenja, i isto tako podržava mehanizam ponovnog izvršenja. Uređaj može promijeniti stanje izvršenja posla u \textit{REJECTED} ako primi nevaljan ili nekompatibilan zahtjev od platforme. Stanje \textit{REMOVED} postavlja se ako uređaj više nije podoban ili valjan za izvršenje traženog posla. 
+
+
+\subsection{AWS IoT OTA}
 
 \subsection{Ostale dostupne IoT usluge u sustavu AWS}
 
