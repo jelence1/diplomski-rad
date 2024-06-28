@@ -73,7 +73,22 @@ Za razvoj predloženog rješenja korišteno je slanje vjerodajnica pomoću Wi-Fi
 
 \subsubsection{LCD zaslon}
 
-Za povezivanje mobilnog uređaja na privremenu pristupnu točku koju emitira razvojni sustav, potrebno je skenirati QR kod koji mikrokontroler generira. Budući da ESP32-C3 nema vlastito sučelje, na sustav je spojen zaslon OLED SSD1306 veličine 128×64 piksela. Uređaj sa zaslonom komunicira putem I2C sučelja, a za prikaz sadržaja na zaslonu korištena je biblioteka LVGL \engl{Light and Versatile Graphics Library}. To je grafička biblioteka otvorenog koda namijenjena izradi aplikacija s grafičkim korisničkim sučeljem \engl{Graphical User Interface - GUI} za ugradbene sustave. Pruža radni okvir s mnogim značajkama, temama i paletama boja. Isto tako, biblioteka troši vrlo malo resursa, što je čini pogodnom za uređaje poput razvojnog sustava ESP32-C3 \cite{lvgl}. Generiranje QR koda obavlja se pomoću biblioteke \textit{QR-Code-Generator} koja je prilagođena ESP32 uređajima. 
+Za povezivanje mobilnog uređaja na privremenu pristupnu točku koju emitira razvojni sustav, potrebno je skenirati QR kod koji mikrokontroler generira. Budući da ESP32-C3 nema vlastito sučelje, na sustav je spojen zaslon OLED SSD1306 veličine 128×64 piksela. Uređaj sa zaslonom komunicira putem I2C sučelja, a za prikaz sadržaja na zaslonu korištena je biblioteka LVGL \engl{Light and Versatile Graphics Library}. To je grafička biblioteka otvorenog koda namijenjena izradi aplikacija s grafičkim korisničkim sučeljem \engl{Graphical User Interface - GUI} za ugradbene sustave. Pruža radni okvir s mnogim značajkama, temama i paletama boja. Isto tako, biblioteka troši vrlo malo resursa, što je čini pogodnom za uređaje poput razvojnog sustava ESP32-C3 \cite{lvgl}. Generiranje QR koda obavlja se pomoću biblioteke \textit{QR-Code-Generator} koja je prilagođena ESP32 uređajima. Tablica \ref{table:pinout_lcd} prikazuje način spajanja pločice sa zaslonom. Kao što se vidi iz konfiguracije, osim napajanja i uzemljenja, potrebno je spojiti liniju za prijenos podataka te liniju takta. 
+
+\begin{table}[ht!]
+	\centering
+	\caption{Povezivanje uređaja i LCD zaslona}
+	\begin{tabular}{|c| c|}
+		\hline
+		\rowcolor{lightblue}  
+		\textbf{Pin razvojnog sustava} & \textbf{Pin zaslona} \\ \hline
+		GND & GND \\ \hline
+		5V & Vcc \\ \hline
+		GPIO 4 & SCL  \\ \hline
+		GPIO 5 & SDA \\ \hline
+	\end{tabular}
+	\label{table:pinout_lcd}
+\end{table}
 
 \begin{lstlisting}[caption={Generiranje QR koda iz pristupne točke}, language=c]
 static void wifi_prov_print_qr(const char *name, const char *usrname, const char *pop, const char *transport, lv_disp_t *disp) {
@@ -193,7 +208,40 @@ Sljedeći programski odsječak prikazuje uspostavu MQTT sjednice pomoću certifi
 
 \subsection{Očitavanje senzorskih mjerenja}
 
-Razvijeni sustav, osim zaslona, sadrži dva senzora koja mjere stanja iz okoline: senzor za temperaturu i vlagu zraka te senzor za vlažnost tla. Mjerenja ovih senzora šalju se na platformu AWS i simuliraju stvarna poljoprivredna mjerenja. Mjerenje temperature i vlage zraka vrši se pomoću senzora DHT11, dok se vlažnost tla mjeri senzorom VMA303. 
+Razvijeni sustav, osim zaslona, sadrži dva senzora koja mjere stanja iz okoline: senzor za temperaturu i vlagu zraka te senzor za vlažnost tla. Mjerenja ovih senzora šalju se na platformu AWS i simuliraju stvarna poljoprivredna mjerenja. Mjerenje temperature i vlage zraka vrši se pomoću modula DHT11, dok se vlažnost tla mjeri senzorom VMA303. Tablice \ref{table:pinout_dht11} i \ref{table:pinout_vma} prikazuju konfiguracije spajanja senzora s razvojnim sustavom. 
+
+\begin{table}[h]
+	\centering
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\begin{tabular}{|c|c|}
+			\hline
+			\rowcolor{lightblue}  
+			\textbf{Pin ESP32-C3} & \textbf{Pin DHT11} \\ \hline
+			GND & GND \\ \hline
+			3.3V & Vcc \\ \hline
+			GPIO 0 & S \\ \hline
+		\end{tabular}
+		\caption{Spajanje uređaja i modula DHT11}
+		\label{table:pinout_dht11}
+	\end{minipage}%
+	\hspace{0.05\textwidth}
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\begin{tabular}{|c|c|}
+			\hline
+			\rowcolor{lightblue}  
+			\textbf{Pin ESP32-C3} & \textbf{Pin VMA303} \\ \hline
+			GND & GND \\ \hline
+			3.3V & Vcc \\ \hline
+			GPIO 2 & S \\ \hline
+		\end{tabular}
+		\caption{Spajanje uređaja i senzora VMA303}
+		\label{table:pinout_vma}
+	\end{minipage}
+\end{table}
+
+Glavna funkcija senzora DHT11 jest mjerenje temperature i vlažnosti okoline. Senzor je tvornički kalibriran te može mjeriti temperaturu od 0°C do 50°C i vlažnost od 20\% do 90\% s točnošću od ±1°C i ±1\%. DHT11 može se nabaviti kao senzor ili kao modul. Senzor dolazi kao 4-pinski paket od kojeg se koriste samo tri pina, dok modul dolazi s tri pina. Razlika između modula i senzora je u tome što modul ima ugrađeni kondenzator za filtriranje i otpornik za lakše spajanje s razvojnim sustavom \cite{dht11}. 
 
 \subsection{Slanje očitanih podataka protokolom MQTT}
 
@@ -250,3 +298,9 @@ Na slici \ref{fig:policies} nalazi se popis politika koje su dodijeljene uređaj
 	\caption{Popis politika dodijeljenih registriranom uređaju}
 	\label{fig:policies}
 \end{figure}
+
+\subsection{Obrada i pohrana dobivenih podataka}
+
+\subsection{Sjena uređaja}
+
+\subsection{Ažuriranje softvera}

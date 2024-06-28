@@ -36,7 +36,7 @@ U nastavku su opisane usluge koje nudi AWS za razvoj IoT sustava.
 
 \section{AWS IoT Core}
 
-AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan \engl{lightweight} protokol za prijenos poruka temeljen na objavi/pretplati sustavu u kojoj glavnu ulogu ima broker kao posrednik, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Komponenta također ima ugrađenu podršku za upravljanje MQTT brokerom koji podržava trajne, uvijek uključene veze, napredna pravila zadržavanja poruka te obrađuje više uređaja i tema istovremeno. Isto tako, AWS IoT Core podržava najnoviji standard MQTT 5 i kompatibilan je sa prethodnim standardom MQTT 3, što omogućuje učinkovito upravljanje heterogenim implementacijama s mnoštvom specifikacija. Nadalje, komponenta omogućava višestruke metode provjere autentičnosti i pristupne politike za zaštitu rješenja od ranjivosti. Štoviše, koristeći pomoć drugih usluga u sklopu platforme kao što je AWS IoT Core Device Advisor, moguće je pristupiti unaprijed izgrađenim paketima testova za provjeru MQTT funkcionalnosti uređaja tijekom faze razvoja.
+AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan \engl{lightweight} protokol za prijenos poruka temeljen na objavi/pretplati sustavu u kojoj glavnu ulogu ima broker kao posrednik, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Komponenta također ima ugrađenu podršku za upravljanje MQTT brokerom koji podržava trajne, uvijek uključene veze, napredna pravila zadržavanja poruka te obrađuje više uređaja i tema istovremeno. Isto tako, AWS IoT Core podržava najnoviji standard MQTT 5 i kompatibilan je s prethodnim standardom MQTT 3, što omogućuje učinkovito upravljanje heterogenim implementacijama s mnoštvom specifikacija. Nadalje, komponenta omogućava višestruke metode provjere autentičnosti i pristupne politike za zaštitu rješenja od ranjivosti. Štoviše, koristeći pomoć drugih usluga u sklopu platforme kao što je AWS IoT Core Device Advisor, moguće je pristupiti unaprijed izgrađenim paketima testova za provjeru MQTT funkcionalnosti uređaja tijekom faze razvoja.
 
 Na slici \ref{fig:aws_iot_core_overview} nalazi se pregled rada usluge AWS IoT Core.
 
@@ -64,7 +64,7 @@ AWS IoT Core usluge za povezivanje pružaju sigurnu komunikaciju s IoT uređajim
 
 Prilazni uređaj omogućuje uređajima sigurnu i efikasnu komunikaciju sa sustavom AWS. Komunikacija je osigurana sigurnosnim protokolima koji koriste  X.509 certifikate. 
 
-Broker za poruke pruža mehanizam uređajima i aplikacijama slanje i primanje poruka. Moguće je koristiti protokol MQTT ili direktno \textit{WebSocket} za objavu i pretplatu na teme. Uređaji i klijenti koriste sučelje HTTP REST za objavu poruka brokeru. Broker zatim distribuira podatke na uređaje koji su se pretplatili na određene teme kao i na druge AWS aplikacije te usluge koje prate teme na brokeru.
+Broker za poruke pruža mehanizam uređajima i aplikacijama slanje i primanje poruka. Moguće je koristiti protokol MQTT ili direktno \textit{WebSocket} za objavu i pretplatu na teme. Uređaji i klijenti koriste sučelje HTTP  za objavu poruka brokeru. Broker zatim distribuira podatke na uređaje koji su se pretplatili na određene teme kao i na druge AWS aplikacije te usluge koje prate teme na brokeru.
 
 AWS IoT Core za protokol LoRaWAN omogućava postavljanje privatne LoRaWAN mreže tako što poveže LoRaWAN te prilazne uređaje na AWS bez potrebe za razvojem mrežnog servera za LoRaWAN \engl{LoRaWAN Network Server - LNS}. Poruke primljene od LoRaWAN uređaja šalju se na stroj za pravila \engl{rules engine} gdje se formatiraju i prosljeđuju ostalim AWS uslugama.
 
@@ -180,6 +180,59 @@ Valja napomenuti kako je moguće u korisničkom sučelju platforme odabrati sve 
 
 Usluga sjene uređaja \engl{Device Shadow} omogućava održavanje trenutnog stanja uređaja, čak i kada su uređaji privremeno nedostupni. AWS nudi uslugu koja održava stanje uređaja kako bi aplikacije mogle komunicirati s uređajem bez obzira je li uređaj na mreži ili ne. Kada uređaj nije priključen na mrežu, usluga sjene uređaja upravlja podacima za povezane uređaje. Kada se uređaj ponovno spoji na mrežu, sinkronizira stanje sa sjenom uređaja koja se nalazi u oblaku. Uređaji također mogu objaviti svoje stanje usluzi u bilo kojem trenutku kako bi bilo na raspolaganju drugim aplikacijama i uređajima. Ova funkcionalnost ključna je za slučajeve u kojima uređaji nemaju konstantnu povezanost na mrežu ili rade u udaljenim ili nepouzdanim mrežnim uvjetima.
 
+Stvari \engl{things} u platformi nemaju nikakvu sjenu dok se eksplicitno ne kreiraju. Sjene se mogu stvarati, ažurirati i brisati pomoću sučelja, no i sami uređaji protokolom MQTT mogu slati poruke na rezervirane teme te tako mijenjati vlastitu sjenu. Budući da AWS pohranjuje sjene u oblaku, podaci o stanju uređaja mogu se slati drugim aplikacijama i uslugama u oblaku bez obzira je li uređaj povezan ili ne.  Dok su uređaji, aplikacije i druge usluge u oblaku povezane s AWS IoT, mogu pristupiti trenutnom stanju uređaja i kontrolirati ga putem njegovih sjena. Traženjem promjene stanja na uređaju ažuriranjem sjene, AWS objavljuje poruku koja označava promjenu na uređaju, čime signalizira uređaju da ažurira svoje stanje sukladno zatraženom i objavljuje poruku s ažuriranim stanjem. Ukoliko dođe do pucanja internetske mreže na uređaju, pri ponovnom spajanju uređaj dohvaća novo stanje te interno ažurira dosadašnje.
+
+Usluga podržava imenovane i neimenovane, odnosno klasične, sjene. Stvar može imati više imenovanih, no najviše jednu klasičnu sjenu. Također može imati rezerviranu imenovanu sjenu koja radi slično kao i imenovana sjena, no nema mogućnost promjene imena. Pomoću imenovanih sjena moguće je stvoriti različite poglede na stanje uređaja odnosno stvari. Primjerice, stvar s puno parametara ili svojstava može se podijeliti u sjene s logičkim skupinama parametara, a svaka sjena ima naziv prikladan skupini svojstava. Istom se metodom može ograničiti pristup pojedinim svojstvima uređaja tako što samo određene aplikacije imaju pristup imenovanoj sjeni, dok druge nemaju. Pristup imenovanim i neimenovanim sjenama razlikuje se u MQTT temi pomoću koje AWS i uređaj komuniciraju. U nastavku su navedene obje teme. 
+
+\begin{lstlisting}[caption={Teme za sjene uređaja}]
+	$aws/things/{thingName}/shadow
+	$aws/things/{thingName}/shadow/name/{shadowName}
+\end{lstlisting}
+
+Svaka sjena ima rezerviranu MQTT temu i HTTP URL koji podržava akcije dohvata, ažuriranja i brisanja sjene. Koriste dokumente u formatu JSON za pohranu i dohvat podataka. Dokument sadrži svojstvo stanja koji pobliže opisuje stanje te koja je svrha samog dokumenta. Tako se razlikuju tri svojstva stanja:
+\begin{itemize}
+	\item željeno \engl{desired} - postavljaju aplikacije kako bi naznačile novo stanje uređaja koje žele,
+	\item prijavljeno \engl{reported} - stanje koje je uređaj prijavio,
+	\item delta - razlika između željenog i prijavljenog, određuje AWS.
+\end{itemize}
+
+Korištenje sjene uređaja u više aplikacija i drugih usluga zahtijeva konzistentnost i koordinaciju između usluga. Sve aplikacije koje koriste sjenu uređaja moraju redovito pratiti i ažurirati podatke na temelju tog stanja. Isto tako, budući da je samo stanje uređaja dinamično, potrebno je držati se određenih naputaka. Uređaji bi trebali jedino slati svojstvo prijavljenog stanja pri komunikaciji s uslugom, dok bi ostale usluge trebale koristiti isključivo svojstvo željenog stanja kako bi podnijeli zahtjev za promjenom stanja. 
+
+Nadalje, ne postoji garancija da će poruke dospjeti u AWS pravilnim vremenskim poretkom. Zato je važno da svaki dokument sjene uređaja sadrži vremensku oznaku \engl{timestamp} kako bi AWS mogao razlučiti koja je poruka ažurnija. Isto tako, svaki dokument stanja ima verziju, čime se jednostavno prati koja je poruka novija. Primjerice, ukoliko stignu dvije željene poruke jedna za drugom od različitih aplikacija, u AWS-u nastat će dva delta dokumenta, po jedan za svako željeno stanje uspoređeno s prijavljenim. Međutim, delta poruka s nižom verzijom bit će odbačena i ostat će samo novije željeno stanje koje će se ažurirati kao novo postojeće. U nastavku je dan primjer za prijavljenu, željenu i delta poruku. 
+
+\begin{lstlisting}[caption={Poruke sjene uređaja}, language=json]
+// reported state
+{
+	"state": {
+		"reported": {
+			"color": "blue"
+		}
+	},
+	"version": 9,
+	"timestamp": 123456700
+}
+// desired state
+{
+	"state": {
+		"desired": {
+			"color": "RED"
+		}
+	},
+	"version": 10,
+	"timestamp": 123456701
+}
+// the resulting delta message
+{
+	"state": {
+		"color": "RED"
+	},
+	"version": 11,
+	"timestamp": 123456702
+}
+\end{lstlisting}
+
+
+
 \subsection{AWS IoT Jobs}
 
 Pokretanje poslova u sklopu usluge AWS IoT Jobs, kao što je ranije spomenuto, služi za udaljene operacije na fizičkim uređajima povezanih s platformom. 
@@ -216,7 +269,7 @@ Za zakazane poslove koji se izvršavaju tijekom prozora održavanja s ručno pos
 	\label{table:cron}
 \end{table}
 
-U tablici se isto tako nalazi stupac za zamjenske znakove. Zamjenski znakovi \engl{wildcards} služe upravo kao zamjena sa konkretnu vrijednost za ona polja čija vrijednost nije bitna u kontekstu izraza. Zarez se koristi za odvajanje više vrijednosti, crtica označava opseg od prve do posljednje definirane vrijednosti, a zvjezdica je zamjena za sve vrijednosti polja. Kosa crta označava pojedinačne inkremente, a upitnik navodi jedno ili drugo. Slovo \textit{L} označava posljednji dan u tjednu ili mjesecu, a \textit{W} radni dan. Ljestve specificiraju pojedinačnu instancu unutar mjeseca, primjerice svaki drugi ponedjeljak u mjesecu. U nastavku je primjer posla u formatu \textit{cron} koji se pokreće svake minute između 15:00 i 15:59, svaki drugi dan u mjesecu, no samo siječnju i veljači:
+U tablici se isto tako nalazi stupac za zamjenske znakove. Zamjenski znakovi \engl{wildcards} služe upravo kao zamjena sa konkretnu vrijednost za ona polja čija vrijednost nije bitna u kontekstu izraza. Zarez se koristi za odvajanje više vrijednosti, crtica označava opseg od prve do posljednje definirane vrijednosti, a zvjezdica je zamjena za sve vrijednosti polja. Kosa crta označava pojedinačne inkremente, a upitnik navodi jedno ili drugo. Slovo \textit{L} označava posljednji dan u tjednu ili mjesecu, a \textit{W} radni dan. Ljestve specificiraju pojedinačnu instancu unutar mjeseca, primjerice svaki drugi ponedjeljak u mjesecu. U nastavku je primjer posla u formatu \textit{cron} koji se pokreće svake minute između 15:00 i 15:59, svaki drugi dan u mjesecu, no samo u siječnju i veljači:
 
 \begin{lstlisting}[caption={Primjer formata tipa \textit{cron}}]
 // min hr day month weekday
@@ -270,8 +323,42 @@ Isto tako, postoje različita stanja izvršenja samog posla. Izvršenje posla od
 
 Kad usluga pošalje posao na ciljni uređaj, status izvršenja posla prelazi u \textit{QUEUED}. Posao stoji u stanju čekanja u redu sve dok uređaj ne primi izvršenje posla, pokrene ga i promijeni status u \textit{IN\_PROGRESS} koji zatim i pošalje na platformu. Isto tako, u slučaju da se posao otkaže ili se kriteriji otkazivanja posla ispune, status izvršenja posla prelazi u \textit{CANCELED}. Pri uspješnom izvršenju posla, uređaj šalje obavijest na platformu o uspješnosti, čime se status mijenja u \textit{SUCCEEDED}. Ako pak izvršenje posla bude neuspješno, prelazi u stanje \textit{FAILED} odakle ima priliku ponovnog izvršenja ako je tako naznačeno pri konfiguraciji samog posla. Stanje \textit{TIMED\_OUT} odnosi se na istek maksimalnog vremena izvođenja, i isto tako podržava mehanizam ponovnog izvršenja. Uređaj može promijeniti stanje izvršenja posla u \textit{REJECTED} ako primi nevaljan ili nekompatibilan zahtjev od platforme. Stanje \textit{REMOVED} postavlja se ako uređaj više nije podoban ili valjan za izvršenje traženog posla. 
 
+Komunikacija između uređaja i platforme može se odvijati putem sučelja REST, odnosno protokolom HTTP, te protokolom MQTT. Preporučena je komunikacija pomoću protokola MQTT zbog ranije opisanih prednosti u brzini i jednostavnosti povezivanja. U tom slučaju, uređaj se mora pretplatiti na rezervirane teme kako bi primio obavijest o nadolazećem izvršenju posla. Glavni je uvjet da razvojni sustav zna ime stvari u platformi kako bi mogao pratiti obavijesti namijenjene sebi. U nastavku su navedene teme na koje se uređaj mora pretplatiti kako bi dobivao obavijesti o poslovima na čekanju. Tema \lstinline|notify| označava da postoji jedan ili više poslova na čekanju, dok tema \lstinline|notify-next| pruža uvid u detalje sljedećeg posla koji je potrebno izvršiti. 
+
+\begin{lstlisting}[caption={Teme za obavijesti o poslovima}]
+	$aws/things/{thingName}/jobs/notify
+	$aws/things/{thingName}/jobs/notify-next
+\end{lstlisting}
+
+Isto tako, postoje teme na koje uređaj objavljuje kako bi obavijestio AWS o stanju izvođenja traženih poslova. Teme su navedene u nastavku.
+
+\begin{lstlisting}[caption={Teme za obavijesti o izvođenju poslova}]
+	$aws/things/{thingName}/jobs/{jobId}/get/accepted
+	$aws/things/{thingName}/jobs/{jobId}/update
+	$aws/things/{thingName}/jobs/{jobId}/update/accepted
+	$aws/things/{thingName}/jobs/{jobId}/update/rejected
+\end{lstlisting}
 
 \subsection{AWS IoT OTA}
+
+Usluga AWS IoT OTA \engl{Over-The-Air} usko je vezana za prethodno opisanu uslugu izvršavanja poslova. Ona omogućava bežično ažuriranje softvera na uređajima, čime se osigurava da uređaji rade na najnovijoj i najsigurnijoj inačici programskog koda. Usluga pruža visoku fleksibilnost i kontrolu nad procesom ažuriranja. Mogu se postaviti različite strategije ažuriranja, primjerice fazna ažuriranja, gdje se prvo ažurira manji dio uređaja kako bi se testirala stabilnost novog softvera prije nego se pošalje na sve uređaje. To omogućava brzo otkrivanje i ispravljanje potencijalnih problema bez utjecaja na sve uređaje odjednom. Osim toga, AWS pruža detaljno nadziranje i praćenje uspješnosti svakog OTA zadatka, što dodatno pomaže u upravljanju i dijagnostici. Korištenje ove usluge primarno se oslanja na uređaje koji podržavaju FreeRTOS. 
+
+Iako su OTA ažuriranja namijenjena za ažuriranje softvera uređaja, mogu se koristiti za slanje bilo kojih datoteka na uređaje registrirane u sustav AWS. Pri bežičnom slanju ažuriranja, preporučljivo je digitalno potpisati datoteke kako bi uređaji koji primaju datoteke mogli potvrditi da nisu mijenjane na putu. U tu svrhu može se koristiti usluga potpisivanja koda koju nudi AWS ili vlastite alate za potpisivanje koda. 
+
+AWS nudi i biblioteku za izvršavanje OTA ažuriranja u sklopu projekta FreeRTOS. Klijentska biblioteka nudi povezivanje putem protokola MQTT i HTTP te logički odvaja operacije ažuriranja softvera od ostatka aplikacije na uređaju. U sklopu biblioteke razvijen je OTA agent koji služi za pojednostavljenje količine koda koju je potrebno napisati za funkcionalnost OTA ažuriranja. Integracija se prvenstveno sastoji od inicijalizacije OTA agenta i stvaranja prilagođene funkcije povratnog poziva za odgovaranje na poruke događaja OTA agenta. Tijekom inicijalizacije agentu se prosljeđuju sučelja korištena za komunikaciju s platformom kao i operacijskim sustavom. Međuspremnici \engl{buffers} se također mogu inicijalizirati i proslijediti OTA agentu. Agent koristi protokol MQTT za sve kontrolne komunikacijske operacije koje uključuju AWS IoT usluge, ali ne upravlja MQTT vezom. Kako bi se osiguralo da OTA agent ne ometa politiku upravljanja vezom aplikacije, MQTT vezom mora upravljati glavna korisnička aplikacija. Datoteka se može preuzeti preko protokola MQTT ili HTTP. Protokol se može odabrati i pri samom kreiranju OTA posla. U slučaju odabira protokola MQTT, agent koristi istu vezu za kontrolne operacije i za preuzimanje datoteka.
+
+Pri kreiranju OTA ažuriranja, usluga za upravljanje OTA ažuriranjima \engl{OTA Update Manager} stvara AWS posao kako bi obavijestila uređaje da je ažuriranje dostupno. Aplikacija na uređaju zatim stvara FreeRTOS zadatak koji se pretplaćuje na teme obavijesti za poslove i čeka poruke ažuriranja. Kada je dostupno ažuriranje, OTA agent objavljuje zahtjev za njim i prihvaća ažuriranja putem protokola MQTT ili HTTP. OTA agent provjerava digitalni potpis primljene datoteke te, ako je potpis valjan, instalira ažuriranje. Cijeli je proces u suštini izvršavanje posla u kombinaciji s dohvatom i verifikacijom datoteke koju je zatim potrebno pokrenuti na uređaju radi ažuriranja. OTA ažuriranje je podatkovna struktura koju održava usluga za upravljanje ažuriranja. Objekt se sastoji od sljedećih komponenti:
+\begin{itemize}
+	\item identifikator OTA ažuriranja,
+	\item opis ažuriranja,
+	\item popis ciljnih uređaja koje je potrebno ažurirati,
+	\item vrsta OTA ažuriranja: kontinuirani ili jednokratni posao,
+	\item protokol za izvođenje ažuriranja: HTTP ili MQTT,
+	\item popis datoteka za slanje na uređaje,
+	\item uloga \engl{role} koja dozvoljava pristup pohrani, poslu i usluzi potpisa koda.
+\end{itemize}
+
+Datoteka koja će se izvršiti na uređaju ključna je komponenta ažuriranja i ona mora biti pohranjena na platformi kako bi se pri svakom izvršavanju posla dohvatila i poslala na ciljne uređaje. Pohrana datoteka omogućena je uslugom Amazon S3 pohrane \engl{Amazon Simple Storage Service Bucket}. To je osnovna komponenta platforme AWS za skladištenje objekata i datoteka. Kante \engl{buckets} omogućavaju korisnicima pohranu i preuzimanje velike količine podataka putem skalabilnog i visoko dostupnog sučelja. Pohranjeni objekti mogu biti bilo koje vrste, uključujući slike, videozapise, dokumente, baze podataka i pričuvne kopije. Svaki objekt čuva se u kanti s jedinstvenim ključem. Podaci u kantama automatski su replicirani preko više uređaja i objekata unutar jedne AWS regije, čime se osigurava otpornost na greške i visoka dostupnost podataka. Također, usluga podržava različite mehanizme za kontrolu pristupa i politike, čime se precizno definira pristup podacima. Isto tako, S3 podržava verzioniranje, što omogućava korisnicima da čuvaju više verzija istog objekta unutar jedne kante. Stoga, kako bi se datoteka ažuriranja mogla poslati putem posla na uređaj, potrebno je kreirati novu kantu u S3 i unutra pohraniti željenu binarnu datoteku. Isto tako, radi potvrde o valjanosti datoteke potrebno je ili pri pohrani digitalno potpisati datoteku ili pak pri kreiranju posla ažuriranja definirati parametre potpisivanja kojima će se dokument potpisati, poput kriptografskog algoritma i potpisa u formatu PEM \engl{Privacy-Enhanced Mail}. Prva je opcija preporučena. 
 
 \subsection{Ostale dostupne IoT usluge u sustavu AWS}
 
