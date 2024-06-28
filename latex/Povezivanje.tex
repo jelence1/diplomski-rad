@@ -172,7 +172,7 @@ Na slikama \ref{fig:esp_softap_app1} i \ref{fig:esp_softap_app2} prikazana je mo
 
 Nakon uspješnog povezivanja na Wi-Fi, sljedeći je korak registracija uređaja na platformu AWS. Korištena je biblioteka za AWS IoT Fleet Provisioning koja se održava u sklopu projekta otvorenog koda \textit{FreeRTOS} \cite{fleet_prov_sdk}. Biblioteka omogućuje mnoštvu odn. floti IoT uređaja registraciju i instalaciju jedinstvenih certifikata na platformu. Bibliotekom je moguće uređaje registrirati i pomoću autoriziranog korisnika, ali i certifikatima zahtjeva. Ova biblioteka ne ovisi o dodatnim bibliotekama osim standardne C biblioteke i stoga se može koristiti s bilo kojom bibliotekom za MQTT protokol.
 
-Za potrebe ovog sustava odabrana je registracija pomoću certifikata zahtjeva. Na slici \ref{fig:fleet_provisioning_by_claim} prikazan je slijed događaja pri registraciji uređaja. Uređaj se najprije spaja na AWS certifikatom zahtjeva koji unaprijed postoji na mikrokontroleru te ostvaruje MQTT vezu. Zatim objavljuje praznu poruku na temu \textit{\$aws/certificates/create/json}, kojom zapravo podnosi zahtjev za kreiranjem vlastitog jedinstvenog certifikata. Usluga kreira traženi certifikat, pripadni ključ te generira značku vlasništva \engl{ownership token}, što sve skupa i objavljuje na temu \textit{\$aws/certificates/created/json/accepted}, na koju je uređaj pretplaćen. Razvojni sustav zatim sigurno pohranjuje dobivene vjerodajnice te objavljuje vlastite parametre i dobivenu značku na temu predloška za registraciju. Ako je kreirana, u sustavu AWS zatim se pokreće Lambda funkcija koja obavlja dodatne provjere nad dobivenim parametrima i tako provjerava valjanost zahtjeva. Primjerice, uređaj pri slanju parametara šalje i hardversku tajnu, koja se može zatim provjeriti u bazi podataka sustava AWS s pohranjenim takvim tajnama i provjeriti valjanost te tajne. Pri uspješnoj provjeri, Lambda funkcija vraća \lstinline|{"allowProvisioning" : True}|, čime daje konačno zeleno svjetlo za registraciju. Usluga posljedično kreira stvar i pripadnu politiku definiranu u predlošku te aktivira novostvoreni certifikat. Objavljuje novu konfiguraciju specifičnu za uređaj na temu za potvrdu uspješne registracije. Razvojni se sustav, nakon primjene nove konfiguracije, povezuje jedinstvenim privatnim ključem te certifikatom na AWS. Ova se nova MQTT veza dalje koristi za komunikaciju i razmjenu podataka.
+Za potrebe ovog sustava odabrana je registracija pomoću certifikata zahtjeva. Na slici \ref{fig:fleet_provisioning_by_claim} prikazan je slijed događaja pri registraciji uređaja. Uređaj se najprije spaja na AWS certifikatom zahtjeva koji unaprijed postoji na mikrokontroleru te ostvaruje MQTT vezu. Zatim objavljuje praznu poruku na temu \textit{\$aws/certificates/create/json}, kojom zapravo podnosi zahtjev za kreiranjem vlastitog jedinstvenog certifikata. Usluga kreira traženi certifikat, pripadni ključ te generira značku vlasništva \engl{ownership token}, što sve skupa i objavljuje na temu \textit{\$aws/certificates/created/json/accepted}, na koju je uređaj pretplaćen. Razvojni sustav zatim sigurno pohranjuje dobivene vjerodajnice te objavljuje vlastite parametre i dobivenu značku na temu predloška za registraciju. Ako je kreirana, u sustavu AWS zatim se pokreće Lambda funkcija koja obavlja dodatne provjere nad dobivenim parametrima i tako provjerava valjanost zahtjeva. Primjerice, uređaj pri slanju parametara šalje i hardversku tajnu, koja se može zatim provjeriti u bazi podataka sustava AWS s pohranjenim takvim tajnama i provjeriti valjanost te tajne. Pri uspješnoj provjeri, Lambda funkcija vraća \lstinline|{"allowProvisioning" : True}|, čime daje konačno zeleno svjetlo za registraciju. Usluga posljedično kreira stvar i pripadnu politiku definiranu u predlošku te aktivira novostvoreni certifikat. Objavljuje novu konfiguraciju specifičnu za uređaj na temu za potvrdu uspješne registracije. Razvojni se sustav, nakon primjene nove konfiguracije, povezuje jedinstvenim privatnim ključem te certifikatom na AWS. Ova se nova MQTT veza dalje koristi za komunikaciju i razmjenu podataka. Ako je prvotno povezivanje neuspješno, aplikacija pokušava spojiti uređaj još dva puta prije nego se spajanje smatra potpuno neuspjelim. U tom slučaju, daljnje akcije čitanja mjerenja i slanja u oblak ne pokreću se jer je spajanje na platformu ključno za ostale radnje, stoga aplikacija izlazi iz glavnog programa. Jedino se ponovnim pokretanjem sustav može ponovno pokušati spojiti na internet i na platformu. 
 
 \begin{figure}[ht]
 	\centering
@@ -241,9 +241,181 @@ Razvijeni sustav, osim zaslona, sadrži dva senzora koja mjere stanja iz okoline
 	\end{minipage}
 \end{table}
 
-Glavna funkcija senzora DHT11 jest mjerenje temperature i vlažnosti okoline. Senzor je tvornički kalibriran te može mjeriti temperaturu od 0°C do 50°C i vlažnost od 20\% do 90\% s točnošću od ±1°C i ±1\%. DHT11 može se nabaviti kao senzor ili kao modul. Senzor dolazi kao 4-pinski paket od kojeg se koriste samo tri pina, dok modul dolazi s tri pina. Razlika između modula i senzora je u tome što modul ima ugrađeni kondenzator za filtriranje i otpornik za lakše spajanje s razvojnim sustavom \cite{dht11}. 
+Glavna funkcija senzora DHT11 jest mjerenje temperature i vlažnosti okoline. Senzor je tvornički kalibriran te može mjeriti temperaturu od 0°C do 50°C i vlažnost od 20\% do 90\% s točnošću od ±1°C i ±1\%. Senzor uključuje komponentu za mjerenje vlažnosti i NTC \engl{Negative Temperature Coefficient} komponentu za mjerenje temperature. DHT11 može se nabaviti kao senzor ili kao modul. Senzor dolazi kao 4-pinski paket od kojeg se koriste samo tri pina, dok modul dolazi s tri pina. Razlika između modula i senzora je u tome što modul ima ugrađeni kondenzator za filtriranje i otpornik za lakše spajanje s razvojnim sustavom \cite{dht11}. U razvijenom je sustavu korišten modul koji već ima integriran otpornik. 
+
+Komunikacija i sinkronizacija između mikrokontrolera i senzora odvija se jednom podatkovnom linijom. Inicijalizacija komunikacije zahtijeva interakciju mikrokontrolera povlačenjem i otpuštanjem signala, čime jedan drugom signaliziraju spremnost na prijenos podataka. Najprije mikrokontroler povlači signal na nisku razinu na najmanje 18 milisekundi, nakon čega otpušta signal i pušta ga da se vrati na visoku razinu te čeka senzor da ga spusti natrag na nisku. DHT11 zatim povlači signal na nisku razinu na otprilike 80 mikrosekundi, nakon čega otpušta signal te se on vraća ponovno na visoku razinu, i taj proces također traje oko 80 mikrosekundi. Po završetku inicijalizacije DHT11 sekvencijalno prenosi 40 podatkovnih bitova, gdje prvi i treći bajt predstavljaju vlagu zraka i temperaturu. Drugi i četvrti bajt sadrže samo nule, a peti je kontrolni zbroj \engl{checksum} svih ostalih bajtova na sljedeći način:
+
+\begin{lstlisting}[caption={Kontrolni zbroj poslanih bajtova s DHT11}, language=c]
+	byte_5 == (byte_1 + byte_2 + byte_3 + byte_4) & 0xFF
+\end{lstlisting}
+
+Sensor VMA303 mjeri vlažnost tla tako što mjeri pad napona preko dvije elektrode. Senzor u sebi već ima integriran komparator, sto nije potrebno spajati dodatnu vanjsku komponentu. Osim elektroda, senzor se sastoji od kontrolnog elektronskog modula koji interpretira signale sa sonde i daje izlaz u digitalnom ili analognom obliku. Kada je sonda ubodena u tlo, metalne elektrode formiraju strujni krug. Vlažno tlo ima veću vodljivost što označava manji otpor, dok suho tlo ima manju vodljivost, time i veći otpor. Kontrolni modul šalje mali električni signal kroz jedan od pinova koji putuje kroz tlo i prima ga drugi pin. Na osnovu količine elektriciteta koji prođe kroz tlo, ovisno o vlažnosti zemlje, modul generira odgovarajući izlazni signal. U analognom načinu rada, modul daje izlazni napon proporcionalan nivou vlažnosti tla. Viša vlažnost rezultira višim naponom na izlaznom pinu, dok niža vlažnost daje niži napon. U slučaju digitalnog izlaza, modul koristi komparator za uspoređivanje izmjerene vrijednosti s unaprijed postavljenim pragom. Ako je vlažnost ispod praga, izlazni pin daje nisku razinu, dok u suprotnom vraća visoku razinu signala.
+
+U razvijenom se sustavu koristi analogni način rada, te je potrebna analogno-digitalna pretvorba za analizu ulaznog signala. Pretvorba se odvija u jednokanalnom načinu rada te se koristi sukcesivna aproksimacija razlučivosti 12 bita. Sljedeći programski isječak prikazuje inicijalizaciju parametara ključnih za čitanje signala i pretvorbu. Vrijednosti \textit{DRY\_SOIL} i \textit{WET\_SOIL} označavaju najmanju i najveću moguću vrijednost pri mjerenju vlažnosti tla, odnosno 0\% i 100\%, te se stvarni postotak dobiva skaliranjem na te dvije vrijednosti i pretvaranjem u postotni oblik. Varijable su dobivene eksperimentalnim mjerenjem sirovih vrijednosti pri vlažnoj i suhoj zemlji. 
+
+\begin{lstlisting}[caption={}, language=c]
+void adc_init(void) {
+	adc1_config_width(ADC_WIDTH);
+}
+
+void moisture_init() {
+	adc1_config_channel_atten(MOISTURE_CHANNEL, ADC_ATTEN);
+}
+
+float read_moisture(void) {
+	
+	int adc_value = adc1_get_raw(MOISTURE_CHANNEL);
+	float moisture = 0;
+	
+	if (adc_value >= WET_SOIL) {
+		moisture = 100.0;
+	} else if (adc_value <= DRY_SOIL) {
+		moisture = 0.0;
+	} else {
+		moisture = ((100.0)/((double) DRY_SOIL - (double) WET_SOIL))*((double) (adc_value) - (double) WET_SOIL);
+	}
+	
+	return moisture;
+}
+\end{lstlisting}
+
+Senzorska mjerenja odvijaju se u posebnom FreeRTOS zadatku koji se pokreće nakon uspješnog povezivanja na Wi-Fi i registracije na platformu. Mjerenja se vrše svakih pet sekundi i prikazuju se na zaslonu. Isti se zadatak koristi i za slanje očitanih podataka nakon čitanja i prikaza. U nastavku je prikazan opisani zadatak. Također, može se primijetiti da isti zadatak pokreće funkciju za ažuriranje sjene uređaja. 
+
+\begin{lstlisting}[caption={FreeRTOS zadatak za očitanje senzorskih mjerenja i slanje podataka}, language=c]
+void publish_message_task(void *pvParameters) {
+	float temperature, humidity, moisture;
+	esp_err_t dht_temp;
+	char display_text[512];
+	
+	while (1) {
+		dht_temp = dht_read_float_data(SENSOR_TYPE, DHT_PIN, &humidity, &temperature) != ESP_OK;
+		moisture = read_moisture();
+		
+		if (dht_temp == ESP_OK) {
+			if (lvgl_port_lock(0)) {
+			  lv_obj_t *screen = lv_scr_act();
+			  lv_obj_clean(screen); // Clear the screen
+			  lv_obj_t *label = lv_label_create(screen);
+			  lv_label_set_long_mode(label,LV_LABEL_LONG_WRAP);
+			  sprintf(display_text, "Temp: %.2f C\nHumid: %.2f%%\nMoist: %.2f%%", temperature, humidity, moisture);
+			  lv_label_set_text(label, display_text);
+			  // Release the mutex
+			  lvgl_port_unlock();
+			}
+			sendMessage(temperature, humidity, moisture);
+			device_shadow_main();
+		}
+		vTaskDelay(pdMS_TO_TICKS(5000));
+	}
+}
+\end{lstlisting}
 
 \subsection{Slanje očitanih podataka protokolom MQTT}
+
+Kao što je ranije spomenuto, slanje očitanih podataka odvija se u istom zadatku odnosno dretvi kao i očitanje mjerenja, neposredno nakon dohvata vrijednosti. Slanje se odvija na temelju ranije ostvarene MQTT veze i razmijenjenim certifikatima. Podaci se šalju u formatu JSON radi jednostavnije kasnije obrade i čitljivosti pri primitku poruka. Za kreiranje podatkovne strukture za slanje korištena je biblioteka \textit{cJSON}. To je lagana i brza biblioteka za rukovanje podacima u obliku JSON namijenjena programskom jeziku C. Omogućava lako parsiranje, generiranje i manipulaciju JSON objekata te podržava sve tipove vrijednosti. Zbog jednostavne i optimizirane implementacije, nudi visoke performanse. Isto tako, ne oslanja se ni na kakve vanjske biblioteke, što je čini portabilnom u svim aplikacijama. Sljedeći programski isječak prikazuje funkcije za pripremanje objekta i njegovo slanje protokolom MQTT. Tema na koju šalje uređaj jest \lstinline[language=c]|device/{clientIdentifier}/data|, gdje je identifikator zapravo serijski naziv uređaja. Time je osigurano da svaki uređaj šalje na točno odgovarajuću temu. 
+
+\begin{lstlisting}[caption={Funkcije za pripremanje JSON objekta i njegovo slanje protokolom MQTT}, language=c]
+void prepareJSONMessage(float temperature, float humidity, float moisture, uint8_t *buffer, size_t *length) {
+	// Create the main JSON object
+	cJSON *jsonObject = cJSON_CreateObject();
+	
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	int64_t time_in_ms = (int64_t)now.tv_sec * 1000 + now.tv_usec / 1000;
+	cJSON_AddNumberToObject(jsonObject, "timestamp", time_in_ms);
+	
+	cJSON_AddStringToObject(jsonObject, "device_id", CLIENT_IDENTIFIER);
+	
+	// Create a nested JSON object for data
+	cJSON *dataObject = cJSON_CreateObject();
+	cJSON_AddNumberToObject(dataObject, "temperature", temperature);
+	cJSON_AddNumberToObject(dataObject, "humidity", humidity);
+	cJSON_AddNumberToObject(dataObject, "moisture", moisture);
+	
+	// Add the data object to the main JSON object
+	cJSON_AddItemToObject(jsonObject, "data", dataObject);
+	
+	// Print the JSON object to a string
+	char *jsonString = cJSON_PrintUnformatted(jsonObject);
+	
+	// Copy the JSON string to the buffer and set the length
+	*length = strlen(jsonString);
+	memcpy(buffer, jsonString, *length);
+	
+	// Clean up
+	cJSON_Delete(jsonObject);
+	cJSON_free(jsonString); // Use cJSON_free to free the allocated string
+}
+
+void sendMessage(float temperature, float humidity, float moisture) {
+	prepareJSONMessage(temperature, humidity, moisture, payloadBuffer, &payloadLength);
+	bool status = false;
+	
+	status = PublishToTopic( MQTT_DATA_TOPIC,
+	MQTT_DATA_TOPIC_LENGTH,
+	( char * ) payloadBuffer,
+	payloadLength );
+	
+	if( status == false )
+	{
+		LogError( ( "Failed to publish to topic: %.*s.",
+		MQTT_DATA_TOPIC_LENGTH,
+		MQTT_DATA_TOPIC ) );
+	}
+	
+}
+\end{lstlisting}
+
+Iz prve funkcije vidljivo je da uređaj u JSON objekt pohranjuje očitane vrijednosti temperature, vlage zraka te vlažnosti tla. Također, šalje identifikator uređaja kako bi se naznačilo koji uređaj šalje podatke. Isto tako, šalje se i vremenska oznaka, što je pogodno za buduću obradu i analizu podataka. Budući da mikrokontroler interno mjeri vrijeme od početka prvog pokretanja nakon instalacije \textit{firmwarea}, potrebno je sinkronizirati njegov interni sat s lokalnim vremenom. Kako bi se osigurano točno vrijeme, mikrokontroler se povezuje na SNTP poslužitelj. Protokol SNTP \engl{Simple Network Time Protocol} jest protokol koji omogućava uređajima da se sinkroniziraju s mrežnim vremenskim poslužiteljima kako bi dobili precizno vrijeme \cite{sntp}. Budući da je uređaj ranijim procesima već spojen na Wi-Fi, potrebno je korištenjem gotove biblioteke tvrtke \textit{Espressif} spojiti se na poslužitelj te dohvatiti trenutno vrijeme i sinkronizirati vlastito u skladu s dohvaćenim. Uređaj se spaja na \lstinline|pool.sntp.org| što je domensko ime za globalni mrežni projekt koji pruža vremenske poslužitelje za sinkronizaciju vremena putem protokola NTP \engl{Network Time Protocol}. Ovu je sinkronizaciju potrebno napraviti samo jednom, i to nakon spajanja na internet. Sljedeći programski isječak prikazuje funkciju koja se spaja na poslužitelj i obavlja sinkronizaciju. Ugrađen je i mehanizam pokušaja ponovnog spajanja svake dvije sekunde u najviše deset iteracija ukoliko prvotno spajanje i dohvat nisu uspješni.
+
+\begin{lstlisting}[caption={Funkcije za sinkronizaciju vremena s SNTP poslužiteljem}, language=c]
+void initialize_sntp(void)
+{
+	ESP_LOGI(TAG, "Initializing SNTP");
+	esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+	esp_sntp_setservername(0, "pool.ntp.org");
+	sntp_set_time_sync_notification_cb(time_sync_notification_cb);
+	esp_sntp_init();
+}
+
+void obtain_time(void)
+{
+	initialize_sntp();
+	
+	// Wait for time to be set
+	time_t now = 0;
+	struct tm timeinfo = { 0 };
+	int retry = 0;
+	const int retry_count = 10;
+	
+	while (timeinfo.tm_year < (2024 - 1900) && ++retry < retry_count) {
+		ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+		vTaskDelay(2000 / portTICK_PERIOD_MS);
+		time(&now);
+		localtime_r(&now, &timeinfo);
+	}
+	
+	if (retry < retry_count) {
+		ESP_LOGI(TAG, "Time synchronized successfully");
+	} else {
+		ESP_LOGE(TAG, "Failed to synchronize time");
+	}
+}
+\end{lstlisting}
+
+Nakon generiranja JSON objekta, ovako izgleda konačan objekt koji uređaj šalje AWS-u:
+
+\begin{lstlisting}[caption={JSON objekt za slanje na platformu}, language=json]
+{
+	"timestamp": 123456789,
+	"device_id": "serialNumber123",
+	"data": {
+		"temperature": 23.00,
+		"humidity": 55.00,
+		"moisture": 62.00
+	}
+}
+\end{lstlisting}
 
 \subsection{Sjena uređaja}
 
