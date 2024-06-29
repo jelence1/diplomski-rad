@@ -310,9 +310,18 @@ void publish_message_task(void *pvParameters) {
 }
 \end{lstlisting}
 
+Slika \ref{fig:complete_device} prikazuje razvojni sustav ESP32-C3 spojen na periferne senzore te LCD zaslon. Isto tako, na zaslonu su vidljiva očitanja dobivena sa senzora. 
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.2]{imgs/complete_device}
+	\caption{Razvojni sustav sa spojenom periferijom}
+	\label{fig:complete_device}
+\end{figure}
+
 \subsection{Slanje očitanih podataka protokolom MQTT}
 
-Kao što je ranije spomenuto, slanje očitanih podataka odvija se u istom zadatku odnosno dretvi kao i očitanje mjerenja, neposredno nakon dohvata vrijednosti. Slanje se odvija na temelju ranije ostvarene MQTT veze i razmijenjenim certifikatima. Podaci se šalju u formatu JSON radi jednostavnije kasnije obrade i čitljivosti pri primitku poruka. Za kreiranje podatkovne strukture za slanje korištena je biblioteka \textit{cJSON}. To je lagana i brza biblioteka za rukovanje podacima u obliku JSON namijenjena programskom jeziku C. Omogućava lako parsiranje, generiranje i manipulaciju JSON objekata te podržava sve tipove vrijednosti. Zbog jednostavne i optimizirane implementacije, nudi visoke performanse. Isto tako, ne oslanja se ni na kakve vanjske biblioteke, što je čini portabilnom u svim aplikacijama. Sljedeći programski isječak prikazuje funkcije za pripremanje objekta i njegovo slanje protokolom MQTT. Tema na koju šalje uređaj jest \lstinline[language=c]|device/{clientIdentifier}/data|, gdje je identifikator zapravo serijski naziv uređaja. Time je osigurano da svaki uređaj šalje na točno odgovarajuću temu. 
+Kao što je ranije spomenuto, slanje očitanih podataka odvija se u istom zadatku odnosno dretvi kao i očitanje mjerenja, neposredno nakon dohvata vrijednosti. Slanje se odvija na temelju ranije ostvarene MQTT veze i razmijenjenim certifikatima. Podaci se šalju u formatu JSON radi jednostavnije kasnije obrade i čitljivosti pri primitku poruka. Za kreiranje podatkovne strukture za slanje korištena je biblioteka \textit{cJSON}. To je lagana i brza biblioteka za rukovanje podacima u obliku JSON namijenjena programskom jeziku C. Omogućava lako parsiranje, generiranje i manipulaciju JSON objekata te podržava sve tipove vrijednosti. Zbog jednostavne i optimizirane implementacije, nudi visoke performanse. Isto tako, ne oslanja se ni na kakve vanjske biblioteke, što je čini portabilnom u svim aplikacijama. Sljedeći programski isječak prikazuje funkcije za pripremanje objekta i njegovo slanje protokolom MQTT. Tema na koju šalje uređaj jest \lstinline[language=c]|device/{clientIdentifier}/data|, gdje je identifikator zapravo serijski naziv uređaja. Time je osigurano da svaki uređaj šalje na točno odgovarajuću temu. Koristi se kvaliteta usluge 0 \engl{Quality of Service - QoS} bez potvrde prijema jer se podaci šalju svakih pet sekundi, a senzorska mjerenja se ne mijenjaju drastično u tako kratkom periodu, stoga si razvijeni sustav može priuštiti povremeni gubitak poruka. Ovim se načinom također štedi vrijeme čekanja i resursi koji su korištenom razvojnom sustavu potrebni.  
 
 \begin{lstlisting}[caption={Funkcije za pripremanje JSON objekta i njegovo slanje protokolom MQTT}, language=c]
 void prepareJSONMessage(float temperature, float humidity, float moisture, uint8_t *buffer, size_t *length) {
@@ -344,7 +353,7 @@ void prepareJSONMessage(float temperature, float humidity, float moisture, uint8
 	
 	// Clean up
 	cJSON_Delete(jsonObject);
-	cJSON_free(jsonString); // Use cJSON_free to free the allocated string
+	cJSON_free(jsonString); // free the allocated string
 }
 
 void sendMessage(float temperature, float humidity, float moisture) {
@@ -472,6 +481,93 @@ Na slici \ref{fig:policies} nalazi se popis politika koje su dodijeljene uređaj
 \end{figure}
 
 \subsection{Obrada i pohrana dobivenih podataka}
+
+Podaci poslani protokolom MQTT u ranije prikazanom formatu JSON šalju se platformi na određenu temu definiranu serijskim nazivom uređaja. Svi se podaci šalju sigurno uspostavljenom vezom na vrata 8883 i krajnju točku brokera koju AWS generira ovisno o regiji kojoj se šalju podaci. Korištenjem testnog klijenta koji nudi AWS i pretplatom na željene teme moguće je u stvarnom vremenu pratiti podatke koji uređaj šalje. 
+
+Primljeni se podaci moraju pohraniti u bazu podataka kako bi se kasnije mogli koristiti za pregled i analizu. AWS nudi uslugu preusmjeravanja poruka \engl{message routing} protokom podataka između povezanih uređaja i aplikacija. Koristi pravila za usmjeravanje \engl{rules engine} kako bi obradila i preusmjerila poruke koje dolaze s uređaja prema drugim uslugama ili vanjskim krajnjim točkama. Moguće je usmjeriti poruke izravno prema sustavima za pohranu koji se nude u sklopu AWS usluga, no isto tako i prema Lambda funkcijama koje mogu vršiti detaljniju obradu podataka. Pravila usmjeravanja definiraju se SQL upitima nad MQTT temama, čime se omogućava filtriranje, transformacija i usmjeravanje podataka na osnovu specifičnih kriterija. Upitima je moguće izdvojiti specifična polja iz JSON poruka ili pak računati nove vrijednosti na temelju dobivenih. 
+
+Svaka ruta mora imati jedinstveno ime te upit kojim se dohvaćaju podaci. Upit je standardan SQL upit, no izvor podataka je tema na koju dolaze poruke u AWS. Unutar tema također je moguće koristiti i zamjenske znakove \engl{wildcards} kako bi upit odgovarao više tema. U razvijenom sustavu korišten je upit koji obuhvaća sve teme na koje uređaji šalju svoje podatke, neovisno o serijskom broju uređaja.
+
+\begin{lstlisting}[caption={SQL upit rute za podatke s uređaja}, language=sql]
+	SELECT * FROM 'device/+/data' 
+\end{lstlisting}
+
+Nadalje, potrebno je odabrati kamo će se odabrani podaci slati. Dobivene je podatke moguće slati u zapise \engl{logs}, metrike, u baze podataka unutar AWS-a, na novu MQTT temu, ili pak preusmjeriti podatke Lambda funkciji. Iako AWS nudi direktno slanje u baze podataka, poput baze DynamoDB, ovo rješenje nije odabrano zbog kompliciranog dohvata podataka i njihove vizualizacije u korištenoj web aplikaciji. Stoga se podaci preusmjeravaju na Lambda funkciju koja vrši daljnju obradu i slanje podataka u bazu. 
+
+Još jedna od usluga platforme AWS jest Amazon Timestream koja nudi potpuno upravljane baze podataka vremenskih serija za radna opterećenja od upita niske latencije pa sve do unosa velikih podataka. Usluga je namijenjena podacima koji sadrže vremensku oznaku za analizu vremenskih serija. Automatski skalira kapacitet prema potrebi, čime omogućava rukovanje mnoštvom podataka bez ručnog dodavanja resursa. Arhitektura je dizajnirana tako da omogućava brzi unos i pokretanje upita, pružajući visoku propusnost i nisku latenciju. Također, automatizira procese arhiviranja i upravljanja podacima. Korisnici mogu definirati politike zadržavanja podataka kako bi se stari podaci automatski premjestili u jeftinijem i sporijem spremniku za pohranu, dok noviji podaci ostaju u pohrani brzog pristupa. Time se optimiziraju troškovi i performanse bez ručne intervencije. U sklopu usluge Amazon Timestream nude se dvije baze podataka vremenskih serija: LiveAnalytics i InfluxDB. Baza LiveAnalytics primarno je namijenjena podacima koji zahtijevaju detaljnu analizu i praćenje velike količine podataka u stvarnom vremenu. Ima ugrađene analitičke funkcije za praćenje trendova i uzoraka. Isto tako, pogodna je za pohranu zapisa i događaja. InfluxDB je baza podataka otvorenog koda, što je čini fleksibilnijom pri konfiguraciji u odnosu na LiveAnalytics. Baza je pogodna za pohranu metrika i očitanja s IoT uređaja \cite{aws_docs}. Kao što je opisano, obje baze podataka pripadaju skupini baza vremenskih serija, koje spadaju u skupinu NoSQL bazi podataka. Takve baze pohranjuju podatke u strukturi drukčijoj od klasičnih relacijskih modela, primjerice u formatu JSON s parovima ključ-vrijednost. NoSQL sustavi nastali su iz novih zahtjeva za većom fleksibilnošću i boljim performansama u pohrani i obradi velike količine podataka, uglavnom zbog popularnosti interneta i internetskih tehnologija te sve veće količine podataka \cite{nosql}. 
+
+U razvijenom je sustavu odabrana baza InfluxDB za pohranu podataka zbog jednostavne konfiguracije i integracije s web aplikacijom. U InfluxDB, kanta \engl{bucket} je osnovna jedinica za pohranu podataka. Kante služe kao logički spremnici za vremenske serije podataka te određuju gdje i kako se podaci čuvaju. Svi podaci unutar jedne kante grupirani su zajedno te se mogu jednostavno pretraživati i analizirati. Isto tako, nad kantom je moguće definirati politiku zadržavanja podataka \engl{retention policy} koja određuje koliko dugo će podaci biti zadržani prije nego se automatski obrišu. Također, pomoću njih se omogućava kontrola pristupa određenoj skupini podataka. Svaka kanta pripada organizaciji, što je radna okolina za skupinu korisnika. Sve nadzorne ploče, kanta i korisnici pripadaju jednoj organizaciji. Podaci su u bazi organizirani po stupcima gdje su postavljeni vremenski blokovi za mjerene vrijednosti, skup oznaka \engl{tags}, te polje kojem podaci pripadaju. Svi podaci pohranjeni u InfluxDB imaju stupac \lstinline|_time| koji pohranjuje vremenske oznake. Oznake su na disku pohranjene u formatu nanosekunde, no preciznost vremenske oznake podataka koji se šalju može se definirati pri samom slanju tih podataka u samom API pozivu. Granulacija može biti na svim razinama od sekunde do nanosekunde. Sljedeći važan stupac koji ima svaki zapis u bazi jest \lstinline|_measurement| koji označava naziv mjerenja. Podaci se grupiraju na temelju te vrijednosti. Posljednji stupac, \lstinline|_field|, može imati beskonačno mnogo parova ključ-vrijednost koji simboliziraju stvarna polja i mjerene vrijednosti. Isto tako, mjerenjima se mogu dodijeliti i oznake na temelju kojih se također može pretraživati i filtrirati. Važno je naglasiti kako polje \lstinline|_field| nije indeksirano, što znači da pretraživanje po njima nije efikasno jer baza mora proći po svim unosima. Stoga se preporuča postavljati vrijednost običnih oznaka budući da je pretraživanje po oznakama indeksirano \cite{influxdb}. 
+
+Nadalje, baza InfluxDB koristi specifičan format podataka za pohranu. Linijski protokol \engl{line protocol} koji koristi baza tekstualni je format za upisivanje točaka u vremenu. Jedan red teksta u formatu linijskog protokola predstavlja jednu podatkovnu točku. Sadrži informacije o vrijednosti mjerenja, oznakama, vremenskoj oznaci i skupu polja. Sljedeći programski isječak prikazuje primjer podatka u formatu linijskog protokola koji se šalje u bazu podataka. Kao što je vidljivo iz isječka, obavezno je navesti naziv mjerenja kojem podatak pripada. Isto tako, mogu se dodati i oznake za kasnije pretraživanje i grupiranje. Zatim se nalazi popis polja odvojen zarezom koji predstavljaju vrijednosti samih mjerenja. Na kraju formata nalazi se obavezna vremenska oznaka. Podaci moraju striktno pratiti ovakav format kako bi baza uspješno parsirala i pohranila dobivene podatke. Format linijskog protokola jednostavan je za upotrebu te je kompaktan, čime smanjuje veličinu podataka i poboljšava efikasnost upisa i preuzimanja. Pogodan je jer podržava dinamičko dodavanje novih polja bez potrebe za izmjenom postojeće strukture podataka. S druge strane, ovakav format nije prikladan za kompleksne strukture podataka ili duboke hijerarhije. Isto tako, zbog jednostavnosti je osjetljiv na greške i formatiranje, što zahtijeva pažljivo rukovanje s formatom podataka.  
+
+\begin{lstlisting}[caption={Podatak u bazi InfluxDB u formatu linijskog protokola}]
+esp32,device_id=MyId123 temp=28,co=11.1 123456789
+|    -------------------- --------------  |
+|             |             |             |
+|             |             |             |
++-----------+--------+-+---------+-+---------+
+|measurement|,tag_set| |field_set| |timestamp|
++-----------+--------+-+---------+-+---------+
+\end{lstlisting}
+
+Budući da se baza podataka nudi u sklopu usluge Amazon Timestream, nije potrebno kreirati vlastite resurse kako bi se baza pokrenula i održavala. Pri kreiranju baze podataka, potrebno je definirati ime baze i glavnog administratora s lozinkom koji se koristi pri prvom spajanju na bazu. Isto tako, potrebno je navesti ime organizacije i početne kante u koju će se spremati podaci. Zatim se konfigurira sama instanca na kojoj će baza biti pokrenuta, odnosno resursi instance. Bira se na temelju korištenog RAM-a, mrežne propusnosti i jačine CPU-a. Potrebno je upisati veličinu diska za pohranu. Baza može biti javno dostupna svima, ili se pak mogu definirati posebne virtualne privatne mreže u oblaku \engl{virtual private cloud - VPC} sa podmrežama. Radi jednostavnosti, baza je javno dostupna iz svih mreža. Važno je napomenuti kako, usprkos javnoj dostupnosti baze, potrebne su vjerodajnice odnosno korisnički podaci kako bi korisnik pristupio bazi. Za bazu razvijenog sustava korišteno je ime \textit{timestream-esp32}, organizacija \textit{fer} te kanta u koju se spremaju podaci naziva se \textit{esp32data}. Slika \ref{fig:influxdb} prikazuje sučelje baze InfluxDB te podaci koji su spremljeni u kantu \textit{esp32data}. Mogu se vidjeti parametri po kojima je moguće filtrirati pretraživanje. 
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.4]{imgs/influxdb}
+	\caption{Sučelje za pregled podataka u bazi InfluxDB}
+	\label{fig:influxdb}
+\end{figure}
+
+Kako je ranije spomenuto, podaci se moraju procesuirati Lambda funkcijom kako bi bili pohranjeni u bazu podataka. Stoga je kreirana Lambda funkcija \textit{ESP32Lambda} koja podatke pretvara u format linijskog protokola te ih šalje u InfluxDB. Ova funkcija pokrenuta je pri događaju \engl{event-driven}, što znači da se svakim dolaskom poruka na pretplaćene teme ova funkcija pokrene. AWS podržava brojne programske jezike putem izvršnih okolina u kojima su integrirane značajke potrebne za izvršavanje funkcije u željenom programskom jeziku. Odabir izvršne okoline za sobom povlači i operacijski sustav na kojem se funkcija izvršava. Ova je funkcija napisana u programskom jeziku Python zbog jednostavnosti i razumljivosti programskog koda. Funkcija je naziva \lstinline[language=python]|lambda_handler| koja predstavlja ulaznu točku \engl{entrypoint} za izvršavanje same funkcije. Iako se mogu napisati i pomoćne funkcije, ova je funkcija ključna za izvršavanje skripte. Sastoji se od dva parametra koje joj prosljeđuje proces zaslužan za pokretanje same funkcije, a to su događaj i kontekst. Događaj je zapravo ulazni podatak primljen putem MQTT veze, a objekt konteksta pruža metode i svojstva koja daju informacije o pozivu, samoj funkciji i okolini izvođenja. Funkcija također može koristiti varijable okoline \engl{environment variables} koje se postavljaju odvojeno od samog koda. Postavljanjem varijabli jednostavno se odvajaju tajni parametri od same funkcije. Budući da funkcija zahtijeva stvaranje API poziva prema bazi kako bi zapisala podatke, potrebno je koristiti vanjske biblioteke za kreiranje HTTP zahtjeva. Izvršna okolina Python koda sama po sebi ne pruža tu biblioteku, no moguće je stvoriti dodatan sloj nad Lambda funkcijom koja će sadržavati potreban paket. Slojevi su mehanizam koji omogućavaju dijeljenje i ponovno korištenje zajedničkog koda i resursa između više Lambda funkcija. Omogućava izolaciju dijelova koda, kreiranje i dijeljene biblioteka ili drugih resursa bez potrebe za mijenjanjem postojeće implementacije. Moguće je koristiti slojeve koje nudi AWS, odabrati vanjski sloj koji su kreirali drugi korisnici platforme, ili pak kreirati vlastiti. U razvijenom je sustavu korištena druga opcija, odnosno sloj koji integrira biblioteku \textit{Requests} za kreiranje API poziva. 
+
+Kreirana Lambda funkcija nalazi se u sljedećem programskom isječku. URL baze podataka, oganizacija te kanta za pohranu podataka dohvaćaju se iz varijabli okoline. Isto tako, kako bi funkcija uopće mogla pristupiti bazi, potrebno je generirati token u bazi koji omogućava pisanje u željenu kantu. Generirani je token također zapisan u varijable okoline. Preciznost vremenske oznake postavljena je na milisekunde budući da podaci s uređaja ESP32-C3 dolaze u takvom formatu. Iz funkcije je vidljivo čitanje vrijednosti, stvaranje podatka u formatu linijskog protokola, slanje POST zahtjeva i čekanje na odgovor. 
+
+\begin{lstlisting}[caption={Lambda funkcija za slanje podataka u InfluxDB}, language={python}]
+import json
+import requests
+import time
+import os
+
+BUCKET = os.getenv('BUCKET')
+ORG = os.getenv('ORG')
+INFLUXDB_URL = os.getenv('INFLUXDB_URL')
+TOKEN = os.getenv('TOKEN')
+
+def lambda_handler(event, context):
+	try:
+		measurement = 'esp32'
+		timestamp = event["timestamp"]
+		device_id = event["device_id"]
+		event_data = event["data"]
+		fields = ",".join([f"{key}={value}" for key, value in event_data.items() if key != "timestamp" and key != "device_id"])
+		data = f"{measurement},device_id={device_id} {fields} {timestamp}"
+		print(data)
+		headers = {
+			'Authorization': f'Token {TOKEN}',
+			'Content-Type': 'text/plain'
+		}
+		params = {
+			'org': ORG,
+			'bucket': BUCKET,
+			'precision': 'ms'
+		}
+		response = requests.post(
+			INFLUXDB_URL,
+			headers=headers,
+			data=data,
+			params=params
+		)
+		response.raise_for_status()
+		print("Data sent to InfluxDB successfully")
+	except Exception as e:
+		print("Error:", e)
+	
+	return {
+		'statusCode': 200,
+		'body': json.dumps('Data processed and sent to InfluxDB')
+	}
+\end{lstlisting}
 
 \subsection{Sjena uređaja}
 
