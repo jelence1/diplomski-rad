@@ -303,7 +303,7 @@ void publish_message_task(void *pvParameters) {
 			  lvgl_port_unlock();
 			}
 			sendMessage(temperature, humidity, moisture);
-			device_shadow_main();
+			color_name = device_shadow_main();
 		}
 		vTaskDelay(pdMS_TO_TICKS(5000));
 	}
@@ -428,6 +428,120 @@ Nakon generiranja JSON objekta, ovako izgleda konačan objekt koji uređaj šalj
 
 \subsection{Sjena uređaja}
 
+Budući da nije kreirana nikakva dodatna aplikacija koja bi koristila sjenu uređaja i tražila zahtjev za promjenom stanja odnosno sjene, uređaj sam sebi šalje zahtjev za promjenom i isto tako šalje i ažurirano stanje. Promjenjivo stanje uređaja simulirano je bojom LED diode koja konstantno treperi periodom od dvije sekunde.  
+
+LED dioda integrirana je u razvojni sustav i vrsta je adresirajuće LED diode. Takve diode mogu se pojedinačno kontrolirati unutar trake ili matrice, čime su omogućeni složeni svjetlosni efekti i uzorci. Za razliku od običnih LED dioda koje se mogu samo uključiti ili isključiti, adresirajuće LED diode imaju integrirane upravljačke čipove koji omogućuju svakom pikselu u traci da primi jedinstvenu naredbu \cite{led}. Pri upravljanju LED diodom, koristi se način rada RMT \engl{Remote Control Transceiver}. To je periferni sklop koji služi kao infracrveni primopredajnik. Međutim, zbog fleksibilnosti formata podataka, RMT se može proširiti na svestrani primopredajnik opće namjene, koji odašilje ili prima i druge vrste signala. Iz perspektive slojevitosti mreže, hardver sadrži i fizički i sloj podatkovne veze. Fizički sloj definira komunikacijski medij i reprezentaciju signala bita, dok sloj podatkovne veze definira format RMT okvira. Ovaj periferni sklop koristi se za generiranje i dekodiranje nizova impulsa, što ga čini prikladnim za zadatke koji uključuju precizno mjerenje vremena, kao što je pokretanje adresirajućih LED dioda. One zahtijevaju striktno vremensko određivanje kako bi ispravno protumačile podatkovne signale \cite{espressif}. 
+
+RMT hardver ima vlastiti format uzorak podataka zvan RMT simbol. Svaki simbol sastoji se od dva para po dvije vrijednosti. Prva vrijednost u paru je 15-bitna vrijednost koja predstavlja trajanje signala u jedinicama RMT taktova. Druga u paru je 1-bitna vrijednost koja predstavlja logičku razinu signala, tj. visoku ili nisku. Slika \ref{fig:rmt} prikazuje način na koji funkcionira RMT odašiljač. Upravljački program kodira korisničke podatke u format podataka tipa RMT, i zatim odašiljač može generirati valne oblike prema artefaktima kodiranja. Također je moguće modulirati visokofrekventni nosivi signal prije usmjeravanja na GPIO izlaze.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.5]{imgs/rmt}
+	\caption{Pregled RMT odašiljača \cite{espressif}}
+	\label{fig:rmt}
+\end{figure}
+
+Sljedeći programski isječak prikazuje konfiguraciju LED diode kao i zadatak koji vrši treperenje. Koristi se biblioteka \textit{led\_strip}, što je službeni upravljački program \engl{driver} za adresirajuće LED diode u modulima ESP32. Konfiguraciji se pridjeljuje GPIO pin na kojem se nalazi dioda te se postavlja razlučivost RMT signala na 10 MHz. Ovo određuje vremensku preciznost signala poslanih LED diodi. Isto tako, moguće je koristiti izravan pristup memoriji \engl{Direct Memory Access - DMA}, no u ovom slučaju nije potreban. U glavnom je programu kreiran poseban FreeRTOS zadatak za treperenje LED diode. Kreirana je posebna struktura \lstinline|color_t| koja predstavlja boju u RGB formatu i odabrana se boja prosljeđuje funkciji \lstinline|blink_led()|. Također, kreirana je posebna funkcija koja na temelju tekstualne riječi boje generira boju u RGB formatu. U razvijenom sustavu podržane su sljedeće boje: crvena, zelena, plava, žuta, ljubičasta i bijela. Parametar \lstinline|color_name| globalna je varijabla koja se postavlja u zadatku koji izvršava slanje poruka i ažuriranje sjene uređaja. 
+
+\begin{lstlisting}[caption={Upravljanje LED diodom}, language=c]
+typedef struct {
+		uint8_t r;
+		uint8_t g;
+		uint8_t b;
+} color_t;
+
+static void configure_led()
+{
+	led_strip_config_t strip_config = {
+		.strip_gpio_num = BLINK_GPIO,
+		.max_leds = 1, // at least one LED on board
+	};
+	led_strip_rmt_config_t rmt_config = {
+		.resolution_hz = 10 * 1000 * 1000, // 10MHz
+		.flags.with_dma = false,
+	};
+	ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+	led_strip_clear(led_strip);
+}
+
+static void blink_led(uint8_t s_led_state, color_t color)
+{
+	if (s_led_state) {
+		led_strip_set_pixel(led_strip, 0, color.r, color.g, color.b);
+		led_strip_refresh(led_strip);
+	} else {
+		led_strip_clear(led_strip);
+	}
+}
+
+void blinky_task(void *pvParameters) {
+	uint8_t s_led_state = 0;
+	color_t color;
+	
+	configure_led();
+	
+	while (1) {
+		if (s_led_state == true) {
+			color = get_color_from_string(color_name);
+		}
+		
+		blink_led(s_led_state, color);
+		s_led_state = !s_led_state;
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
+}
+\end{lstlisting}
+
+Kao što je ranije spomenuto, uređaj najprije generira zahtjev za promjenom stanja, odnosno pošalje željeno stanje AWS-u i na temelju tog zahtjeva mijenja stvarno stanje i prijavljuje ga. Željeno je stanje nasumičan odabir jedne od ranije navedenih boja u tekstualnom obliku. Razvijeni sustav koristi samo jednu sjenu uređaja, i to klasičnu. Svaka tema vezana za sjenu uređaja povezana je sa stvari odnosno njezinim imenom, te se slanjem na pojedinačne teme podrazumijeva da je u temu integriran naziv stvari o čijoj se sjeni uređaja radi. Funkcionalnost sjene uređaja funkcionira na sljedeći način: najprije, uređaj pokušava obrisati sjenu ako postoji. Za to se mora pretplatiti na teme \textit{/delete/accepted} i \textit{/delete/rejected} te objaviti na temu \textit{delete} i primati poruke na pretplaćenim temama. Brisanje se smatra uspješnim u ova dva slučaja:
+\begin{itemize}
+	\item poruka je stigla na temu \textit{/delete/accepted},
+	\item poruka je stigla na temu \textit{/delete/rejected} s greškom 404, što znači da pri pokušaju brisanja sjena uređaja ne postoji.
+\end{itemize}
+
+Uređaj se nakon uspješnog brisanja odjavljuje s pretplaćenih tema i prijavljuje se na teme za ažuriranja sjene uređaja. Zatim uređaj nasumično generira boju koja će predstavljati željeno stanje uređaja i šalje je na temu \textit{/update}, na koju je ujedno i pretplaćen. Ta ista poruka stigne na pretplaćenu temu i uređaj ažurira trenutnu boju LED diode u diodu željenog stanja i zatim šalje prijavljeno stanje na platformu. Verzije sjene uređaja automatski se povećavaju za jedan. Isto tako, svaki zahtjev ima vlastiti klijentski token koji je postavljen na serijski broj uređaja. Time je osigurano da se sjene različitih uređaja ne miješaju, nego da uređaj samom sebi šalje zahtjev. Po primitku željene poruke, program provjerava odgovara li klijentski token vlastitom tokenu, te u tom slučaju odobrava promjenu stanja, mijenja boju LED diode i šalje platformi novo prijavljeno stanje. Sljedeći programski isječak prikazuje skraćenu verziju opisanog procesa pretplate, brisanja sjene, odjave, ponovne pretplate te objave ažuriranja sjene uređaja. Iz isječka se može vidjeti da se, za razliku od slanja podataka, proces komunikacije s platformom vezano za sjenu uređaja odvija kvalitetom usluge QoS1, što znači da sustav čeka odgovor na poruku. Time se osigurava da će se stanje stvarno ažurirati na novu vrijednost.  
+
+\begin{lstlisting}[caption={Proces ažuriranja sjene uređaja}, language=c]
+LogInfo( ( "Sub to `/delete/accepted` and `/delete/rejected` topics." ) );
+status = SubscribeToTopic( SHADOW_TOPIC_STR_DELETE_ACC( THING_NAME, SHADOW_NAME ),
+	SHADOW_TOPIC_LEN_DELETE_ACC( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+status = SubscribeToTopic( SHADOW_TOPIC_STR_DELETE_REJ( THING_NAME, SHADOW_NAME ),
+	SHADOW_TOPIC_LEN_DELETE_REJ( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
+LogInfo( ( "Publish to `delete` topic to try to delete the shadow doc." ) );
+status = PublishToTopicQoS1( SHADOW_TOPIC_STR_DELETE( THING_NAME, SHADOW_NAME ), 
+	SHADOW_TOPIC_LEN_DELETE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
+	updateDocument,
+	0U );
+			
+/* Unsubscribe from topics... */
+/* Subscribe to /update/delta topics... */
+
+LogInfo( ( "Send desired color." ) );
+( void ) memset( updateDocument,
+	0x00,
+	sizeof( updateDocument ) );
+
+const char* randomColor = get_random_color_string();
+
+snprintf( updateDocument,
+	SHADOW_DESIRED_JSON_LENGTH + 1,
+	SHADOW_DESIRED_JSON,
+	randomColor,
+	clientToken );
+
+status = PublishToTopicQoS1( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
+	SHADOW_TOPIC_LEN_UPDATE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
+	updateDocument,
+	( SHADOW_DESIRED_JSON_LENGTH + 1 ) );
+\end{lstlisting}
+
+Slika \ref{fig:rgb_lights} prikazuje nekoliko različitih boja LED diode koje se kontroliraju sjenom uređaja. 
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.5]{imgs/rgb_lights}
+	\caption{Različite boje LED diode}
+	\label{fig:rgb_lights}
+\end{figure}
 \subsection{Ažuriranje softvera}
 
 \section{Programska potpora za oblak}
@@ -519,7 +633,7 @@ Budući da se baza podataka nudi u sklopu usluge Amazon Timestream, nije potrebn
 	\label{fig:influxdb}
 \end{figure}
 
-Kako je ranije spomenuto, podaci se moraju procesuirati Lambda funkcijom kako bi bili pohranjeni u bazu podataka. Stoga je kreirana Lambda funkcija \textit{ESP32Lambda} koja podatke pretvara u format linijskog protokola te ih šalje u InfluxDB. Ova funkcija pokrenuta je pri događaju \engl{event-driven}, što znači da se svakim dolaskom poruka na pretplaćene teme ova funkcija pokrene. AWS podržava brojne programske jezike putem izvršnih okolina u kojima su integrirane značajke potrebne za izvršavanje funkcije u željenom programskom jeziku. Odabir izvršne okoline za sobom povlači i operacijski sustav na kojem se funkcija izvršava. Ova je funkcija napisana u programskom jeziku Python zbog jednostavnosti i razumljivosti programskog koda. Funkcija je naziva \lstinline[language=python]|lambda_handler| koja predstavlja ulaznu točku \engl{entrypoint} za izvršavanje same funkcije. Iako se mogu napisati i pomoćne funkcije, ova je funkcija ključna za izvršavanje skripte. Sastoji se od dva parametra koje joj prosljeđuje proces zaslužan za pokretanje same funkcije, a to su događaj i kontekst. Događaj je zapravo ulazni podatak primljen putem MQTT veze, a objekt konteksta pruža metode i svojstva koja daju informacije o pozivu, samoj funkciji i okolini izvođenja. Funkcija također može koristiti varijable okoline \engl{environment variables} koje se postavljaju odvojeno od samog koda. Postavljanjem varijabli jednostavno se odvajaju tajni parametri od same funkcije. Budući da funkcija zahtijeva stvaranje API poziva prema bazi kako bi zapisala podatke, potrebno je koristiti vanjske biblioteke za kreiranje HTTP zahtjeva. Izvršna okolina Python koda sama po sebi ne pruža tu biblioteku, no moguće je stvoriti dodatan sloj nad Lambda funkcijom koja će sadržavati potreban paket. Slojevi su mehanizam koji omogućavaju dijeljenje i ponovno korištenje zajedničkog koda i resursa između više Lambda funkcija. Omogućava izolaciju dijelova koda, kreiranje i dijeljene biblioteka ili drugih resursa bez potrebe za mijenjanjem postojeće implementacije. Moguće je koristiti slojeve koje nudi AWS, odabrati vanjski sloj koji su kreirali drugi korisnici platforme, ili pak kreirati vlastiti. U razvijenom je sustavu korištena druga opcija, odnosno sloj koji integrira biblioteku \textit{Requests} za kreiranje API poziva. 
+Kako je ranije spomenuto, podaci se moraju obraditi Lambda funkcijom kako bi bili pohranjeni u bazu podataka. Stoga je kreirana Lambda funkcija \textit{ESP32Lambda} koja podatke pretvara u format linijskog protokola te ih šalje u InfluxDB. Ova funkcija pokrenuta je pri događaju \engl{event-driven}, što znači da se svakim dolaskom poruka na pretplaćene teme ova funkcija pokrene. AWS podržava brojne programske jezike putem izvršnih okolina u kojima su integrirane značajke potrebne za izvršavanje funkcije u željenom programskom jeziku. Odabir izvršne okoline za sobom povlači i operacijski sustav na kojem se funkcija izvršava. Ova je funkcija napisana u programskom jeziku Python zbog jednostavnosti i razumljivosti programskog koda. Funkcija je naziva \lstinline[language=python]|lambda_handler| koja predstavlja ulaznu točku \engl{entrypoint} za izvršavanje same funkcije. Iako se mogu napisati i pomoćne funkcije, ova je funkcija ključna za izvršavanje skripte. Sastoji se od dva parametra koje joj prosljeđuje proces zaslužan za pokretanje same funkcije, a to su događaj i kontekst. Događaj je zapravo ulazni podatak primljen putem MQTT veze, a objekt konteksta pruža metode i svojstva koja daju informacije o pozivu, samoj funkciji i okolini izvođenja. Funkcija također može koristiti varijable okoline \engl{environment variables} koje se postavljaju odvojeno od samog koda. Postavljanjem varijabli jednostavno se odvajaju tajni parametri od same funkcije. Budući da funkcija zahtijeva stvaranje API poziva prema bazi kako bi zapisala podatke, potrebno je koristiti vanjske biblioteke za kreiranje HTTP zahtjeva. Izvršna okolina Python koda sama po sebi ne pruža tu biblioteku, no moguće je stvoriti dodatan sloj nad Lambda funkcijom koja će sadržavati potreban paket. Slojevi su mehanizam koji omogućavaju dijeljenje i ponovno korištenje zajedničkog koda i resursa između više Lambda funkcija. Omogućava izolaciju dijelova koda, kreiranje i dijeljene biblioteka ili drugih resursa bez potrebe za mijenjanjem postojeće implementacije. Moguće je koristiti slojeve koje nudi AWS, odabrati vanjski sloj koji su kreirali drugi korisnici platforme, ili pak kreirati vlastiti. U razvijenom je sustavu korištena druga opcija, odnosno sloj koji integrira biblioteku \textit{Requests} za kreiranje API poziva. 
 
 Kreirana Lambda funkcija nalazi se u sljedećem programskom isječku. URL baze podataka, oganizacija te kanta za pohranu podataka dohvaćaju se iz varijabli okoline. Isto tako, kako bi funkcija uopće mogla pristupiti bazi, potrebno je generirati token u bazi koji omogućava pisanje u željenu kantu. Generirani je token također zapisan u varijable okoline. Preciznost vremenske oznake postavljena je na milisekunde budući da podaci s uređaja ESP32-C3 dolaze u takvom formatu. Iz funkcije je vidljivo čitanje vrijednosti, stvaranje podatka u formatu linijskog protokola, slanje POST zahtjeva i čekanje na odgovor. 
 
@@ -570,5 +684,93 @@ def lambda_handler(event, context):
 \end{lstlisting}
 
 \subsection{Sjena uređaja}
+
+Za ažuriranje sjene uređaja u AWS-u nije potrebna nikakva dodatna konfiguracija. Jedini je uvjet da stvar za koju je uređaj vezan postoji, no to je svakako osigurano registracijom na platformu. Uređaj kreira prvotnu klasičnu sjenu uređaja i ažurira je svakom iteracijom programa. Druge aplikacije mogu dohvatiti podatke o sjeni uređaja pretplatom na njegove teme. Prefiks za sve teme jest \lstinline|$aws/things/{thingName}/shadow|. Budući da pregled sjene uređaja u AWS-u sam po sebi nije osobito koristan, po uzoru na proces pohrane senzorskih očitanja, kreirana je ruta koja poruke dospjele na temu ažuriranja sjene prosljeđuje Lambda funkciji, koja pak obrađuje podatke i sprema ih u postojeću bazu InfluxDB. Kreiran je SQL upit koja sve poruke dospjele na temu uspješnog ažuriranja, odnosno poruke prijavljenog stanja, prosljeđuje posebnoj funkciji. 
+
+\begin{lstlisting}[caption={SQL upit rute za sjene uređaja}, language=sql]
+	SELECT * FROM '$aws/things/+/shadow/update/accepted'
+\end{lstlisting}
+
+Iako sami uređaji u prijavljenom stanju ne postavljaju serijski broj na temelju kojeg bi se izvorišni uređaji mogli razlučiti, svaka poruka sadrži ranije opisani klijentski identifikator na temelju kojeg se kasnije grupiraju podaci. Poruka u formatu JSON koja se rutom proslijedi Lambda funkciji nalazi se u sljedećem programskom isječku. 
+
+\begin{lstlisting}[caption={Poruka ažurirane sjene}, language=json]
+{
+	"state": {
+		"reported": {
+			"color": "WHITE"
+		}
+	},
+	"metadata": {
+		"reported": {
+			"color": {
+				"timestamp": 1719764472
+			}
+		}
+	},
+	"version": 15299,
+	"timestamp": 1719764472,
+	"clientToken": "deviceNumber123"
+}
+\end{lstlisting}
+
+Lambda funkcija sjene uređaja \textit{ESP32ShadowLambda} gotovo je identična funkciji za pohranu podataka, s manjim izmjenama dohvaćanja identifikatora uređaja i promjene vremenske oznake. Biblioteka razvojnog sustava za sjenu uređaja automatski pridjeljuje vremensku oznaku u obliku sekunde, dok API prihvaća podatke na razini milisekunde. Kreirana je nova kanta \textit{esp32state} u bazi InfluxDB koja služi za pohranu stanja sjene. Generiran je i odgovarajući token pisanja u novu kantu, i shodno tome stvorene su nove varijable okoline. Ova se funkcija također bazira na dodatnom sloju koji sadrži paket \textit{Requests} programskog jezika Python za komunikaciju putem API-ja. Isto tako, napravljena je provjera postoji li polje \textit{desired} u JSON objektu, za slučaj da se na temi nađe poruka željenog stanja koja se ne sprema u bazu. Pohrana je namijenjena samo stvarnim ažuriranjima koji dolaze iz poruka prijavljenog stanja.
+
+\begin{lstlisting}[caption={Lambda funkcija za preusmjeravanje poruka sjene uređaja}, language=python]
+import json
+import requests
+import time
+import os
+
+BUCKET = os.getenv('BUCKET')
+ORG = os.getenv('ORG')
+INFLUXDB_URL = os.getenv('INFLUXDB_URL')
+TOKEN = os.getenv('TOKEN')
+
+def lambda_handler(event, context):
+	if "reported" not in event["state"].keys():
+		print("Desired event, skip storing")
+	return
+	
+	try:
+		measurement = 'esp32'
+		timestamp = event["timestamp"]
+		current_state = event["state"]["reported"]
+		device_id = event["clientToken"]
+		fields = ",".join([f"{key}=\"{value}\"" for key, value in current_state.items() if key != "timestamp" and key != "clientToken"])
+		data = f"{measurement},device_id={device_id} {fields} {timestamp * 1000}"
+		headers = {
+			'Authorization': f'Token {TOKEN}',
+			'Content-Type': 'text/plain'
+		}
+		params = {
+			'org': ORG,
+			'bucket': BUCKET,
+			'precision': 'ms'
+		}
+		response = requests.post(
+			INFLUXDB_URL,
+			headers=headers,
+			data=data,
+			params=params
+		)
+		response.raise_for_status()
+		print("Data sent to InfluxDB successfully")
+	except Exception as e:
+		print("Error:", e)
+	
+	return {
+		'statusCode': 200,
+		'body': json.dumps('Data processed and sent to InfluxDB')
+	}
+\end{lstlisting}
+
+Slika \ref{fig:influxdb_state} prikazuje podatke sjene uređaja u sučelju baze InfluxDB. Vidljive su promjene stanja kroz vrijeme, odnosno različite vrijednosti boje LED diode koje je uređaj prijavio. 
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.4]{imgs/influxdb_state}
+	\caption{Sučelje za pregled stanja uređaja u bazi InfluxDB}
+	\label{fig:influxdb_state}
+\end{figure}
 
 \subsection{Ažuriranje softvera}
