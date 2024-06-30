@@ -486,7 +486,7 @@ static color_t get_color_from_string(const char* color_name) {
         return (color_t){0, 0, 255};
     } else if (strcmp(color_name, "YELLOW") == 0) {
         return (color_t){255, 255, 0};
-    } else if (strcmp(color_name, "PINK") == 0) {
+    } else if (strcmp(color_name, "PURPLE") == 0) {
         return (color_t){255, 0, 255};
     } else if (strcmp(color_name, "WHITE") == 0) {
         return (color_t){255, 255, 255};
@@ -519,7 +519,6 @@ void blinky_task(void *pvParameters) {
 
     while (1) {
         if (s_led_state == true) {
-            //color_name = get_random_color_string();
             color = get_color_from_string(color_name);
         }
 

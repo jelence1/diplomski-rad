@@ -994,7 +994,7 @@ int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
 
 
 static const char* get_random_color_string() {
-    const char* colors[] = {"RED", "GREEN", "BLUE", "YELLOW", "PINK", "WHITE"};
+    const char* colors[] = {"RED", "GREEN", "BLUE", "YELLOW", "PURPLE", "WHITE"};
     int num_colors = sizeof(colors) / sizeof(colors[0]);
     int random_index = rand() % num_colors;
     return colors[random_index];
