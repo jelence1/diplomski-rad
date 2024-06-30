@@ -8,7 +8,7 @@ Oblak koju pruža platforma AWS i razvojni sustav ESP32-C3 dva su odvojena susta
 
 \section{Programska potpora za mikrokontroler}
 
-Programska potpora za uređaj ESP32-C3 sastoji se od nekoliko komponenti:
+Za razvoj programske potpore za mikrokontroler korišten je paket za razvoj softvera \textit{ESP-AWS-IoT} \engl{Software Development Kit - SDK} tvrtke \textit{Espressif}. To je repozitorij otvorenog koda temeljen na službenom programskom paketu tvrtke Amazon koji omogućava ugradbenim računalima razvijanih u programskom jeziku C komunikaciju s AWS-om. Korišteni razvojni paket omogućava uređajima temeljnim na ESP32 jezgri povezivanje sa uslugama platforme AWS. Pojednostavljuje integraciju uređaja s AWS ekosustavom nudeći gotova sučelja i programske primjere za sve značajke \cite{esp_aws_iot}. Razvijena programska potpora za uređaj ESP32-C3 sastoji se od nekoliko komponenti:
 \begin{itemize}
 	\item dinamičko povezivanje na bežičnu mrežu,
 	\item spajanje na platformu AWS,
@@ -542,11 +542,14 @@ Slika \ref{fig:rgb_lights} prikazuje nekoliko različitih boja LED diode koje se
 	\caption{Različite boje LED diode}
 	\label{fig:rgb_lights}
 \end{figure}
+
 \subsection{Ažuriranje softvera}
+
+Programska potpora za ažuriranje softvera koristi OTA biblioteku u sklopu ranije spomenutog razvojnog paketa za integraciju platforme AWS i ESP32 uređaja. Primaju se MQTT poruke koje se prosljeđuju OTA agentu za moguću obradu. OTA agent koji je već razvijen u sklopu biblioteke obavlja glavni dio posla i provjerava je li mu dolazna MQTT poruka zapravo namijenjena. 
 
 \section{Programska potpora za oblak}
 
-Programska potpora za platformu AWS nije kod u standardnom smislu, no kako bi se uređaj i platforma uopće mogli komunicirati međusobno, potrebno je omogućiti povezivanje i komunikaciju na samoj platformi. Sva se komunikacija odvija u istoj AWS regiji. Zbog dostupnosti većine IoT usluga i relativne geografske bliskosti, korištena je regija \textit{eu-north-1} odnosno Stockholm, Švedska. 
+Programska potpora za platformu AWS većim dijelom nije kod u standardnom smislu, no kako bi se uređaj i platforma uopće mogli komunicirati međusobno, potrebno je omogućiti povezivanje i komunikaciju na samoj platformi. Sva se komunikacija odvija u istoj AWS regiji. Zbog dostupnosti većine IoT usluga i relativne geografske bliskosti, korištena je regija \textit{eu-north-1} odnosno Stockholm, Švedska. 
 
 Isto tako, važno je istaknuti kako se sve opisane radnje u sustavu AWS mogu izvršavati pomoću naredbenog retka platforme AWS \engl{Command-line interface - CLI}, no radi jednostavnosti i preglednosti, korišteno je korisničko sučelje platforme.
 
