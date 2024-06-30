@@ -175,6 +175,16 @@ typedef enum
 } ResponseStatus_t;
 
 /**
+ * @brief The simulated device current heap state.
+ */
+static uint32_t currentHeap = 0;
+
+/**
+ * @brief The device LED color.
+ */
+static char currentColor[64] = "WHITE";
+
+/**
  * @brief Format string representing a Shadow document with a "desired" state.
  *
  * The real json document will look like this:
@@ -194,8 +204,8 @@ typedef enum
 #define SHADOW_DESIRED_JSON     \
     "{"                         \
     "\"state\":{"               \
-    "\"desired\":{"             \
-    "\"heap\":%u"               \
+    "\"reported\":{"            \
+    "\"color\":\"%s\""          \
     "}"                         \
     "},"                        \
     "\"clientToken\":\"%s\""    \
@@ -215,7 +225,7 @@ typedef enum
  *
  * In your own application, you could calculate the size of the json doc in this way.
  */
-#define SHADOW_DESIRED_JSON_LENGTH    201
+#define SHADOW_DESIRED_JSON_LENGTH    243
 
 /**
  * @brief Format string representing a Shadow document with a "reported" state.
@@ -238,7 +248,7 @@ typedef enum
     "{"                         \
     "\"state\":{"               \
     "\"reported\":{"            \
-    "\"heap\":%u"               \
+    "\"color\":\"%s\""          \
     "}"                         \
     "},"                        \
     "\"clientToken\":\"%s\""    \
@@ -251,7 +261,7 @@ typedef enum
  * its full size is known at compile-time by pre-calculation. Users could refer to
  * the way how to calculate the actual length in #SHADOW_DESIRED_JSON_LENGTH.
  */
-#define SHADOW_REPORTED_JSON_LENGTH    201
+#define SHADOW_REPORTED_JSON_LENGTH    243
 
 /**
  * @brief The maximum number of times to run the loop in this demo.
@@ -281,11 +291,6 @@ typedef enum
 #define SHADOW_DELETE_REJECTED_ERROR_CODE_KEY_LENGTH    ( ( uint16_t ) ( sizeof( SHADOW_DELETE_REJECTED_ERROR_CODE_KEY ) - 1 ) )
 
 /*-----------------------------------------------------------*/
-
-/**
- * @brief The simulated device current heap state.
- */
-static uint32_t currentHeap = 0;
 
 /**
  * @brief The flag to indicate the device current heap size changed.
@@ -365,6 +370,9 @@ static size_t payloadLength;
  * @param[in] packetIdentifier Packet identifier of the incoming publish.
  */
 static void provisioningPublishCallback( MQTTPublishInfo_t * pPublishInfo,
+                                         uint16_t packetIdentifier );
+
+static void shadowCallback( MQTTPublishInfo_t * pPublishInfo,
                                          uint16_t packetIdentifier );
 
 /**
@@ -925,7 +933,7 @@ int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
         if( status == true )
         {
             LogInfo( ( "Establishing MQTT session with provisioned certificate..." ) );
-            status = EstablishMqttSession( provisioningPublishCallback,
+            status = EstablishMqttSession( shadowCallback,
                                            *p11Session,
                                            pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS,
                                            pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS );
@@ -983,6 +991,14 @@ int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session)
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
+
+
+static const char* get_random_color_string() {
+    const char* colors[] = {"RED", "GREEN", "BLUE", "YELLOW", "PINK", "WHITE"};
+    int num_colors = sizeof(colors) / sizeof(colors[0]);
+    int random_index = rand() % num_colors;
+    return colors[random_index];
+}
 
 static void deleteRejectedHandler( MQTTPublishInfo_t * pPublishInfo )
 {
@@ -1053,7 +1069,7 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
 {
     static uint32_t currentVersion = 0; /* Remember the latestVersion # we've ever received */
     uint32_t version = 0U;
-    uint32_t newHeap = 0U;
+    const char* newColor;
     char * outValue = NULL;
     uint32_t outValueLength = 0U;
     JSONStatus_t result = JSONSuccess;
@@ -1068,7 +1084,8 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
      *      "version": 12,
      *      "timestamp": 1595437367,
      *      "state": {
-     *          "heap": 1
+     *          "heap": 1,
+     *          "color": "GREEN"
      *      },
      *      "metadata": {
      *          "heap": {
@@ -1126,8 +1143,8 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
         /* Get heap state from json documents. */
         result = JSON_Search( ( char * ) pPublishInfo->pPayload,
                               pPublishInfo->payloadLength,
-                              "state.heap",
-                              sizeof( "state.heap" ) - 1,
+                              "state.color",
+                              sizeof( "state.color" ) - 1,
                               &outValue,
                               ( size_t * ) &outValueLength );
     }
@@ -1144,16 +1161,16 @@ static void updateDeltaHandler( MQTTPublishInfo_t * pPublishInfo )
     if( result == JSONSuccess )
     {
         /* Convert the heap state value to an unsigned integer value. */
-        newHeap = ( uint32_t ) strtoul( outValue, NULL, 10 );
+        newColor = ( const char* ) strtoul( outValue, NULL, 10 );
 
-        LogInfo( ( "The new heap state newState:%"PRIu32", currentHeapState:%"PRIu32" \r\n",
-                   newHeap, currentHeap ) );
+        LogInfo( ( "The new color state newColor:%s, currentColor:%s \r\n",
+                   newColor, currentColor ) );
 
-        if( newHeap != currentHeap )
+        if( strcmp(newColor, currentColor) != 0 )
         {
             /* The received heap state is different from the one we retained before, so we switch them
              * and set the flag. */
-            currentHeap = newHeap;
+            strcpy(currentColor, newColor);
 
             /* State change will be handled in main(), where we will publish a "reported"
              * state to the device shadow. We do not do it here because we are inside of
@@ -1190,7 +1207,8 @@ static void updateAcceptedHandler( MQTTPublishInfo_t * pPublishInfo )
      *  {
      *      "state": {
      *          "reported": {
-     *          "heap": 1
+     *          "heap": 1,
+     *          "color": "GREEN"
      *          }
      *      },
      *      "metadata": {
@@ -1264,87 +1282,73 @@ static void updateAcceptedHandler( MQTTPublishInfo_t * pPublishInfo )
  * function to determine whether the incoming message is a device shadow message
  * or not. If it is, it handles the message depending on the message type.
  */
-static void shadowCallback( MQTTContext_t * pMqttContext,
-                           MQTTPacketInfo_t * pPacketInfo,
-                           MQTTDeserializedInfo_t * pDeserializedInfo )
+static void shadowCallback( MQTTPublishInfo_t * pPublishInfo,
+                            uint16_t packetIdentifier )
 {
     ShadowMessageType_t messageType = ShadowMessageTypeMaxNum;
     const char * pThingName = NULL;
     uint8_t thingNameLength = 0U;
     const char * pShadowName = NULL;
     uint8_t shadowNameLength = 0U;
-    uint16_t packetIdentifier;
 
-    ( void ) pMqttContext;
-
-    assert( pDeserializedInfo != NULL );
-    assert( pMqttContext != NULL );
-    assert( pPacketInfo != NULL );
-
-    packetIdentifier = pDeserializedInfo->packetIdentifier;
+    (void)packetIdentifier;
 
     /* Handle incoming publish. The lower 4 bits of the publish packet
      * type is used for the dup, QoS, and retain flags. Hence masking
      * out the lower bits to check if the packet is publish. */
-    if( ( pPacketInfo->type & 0xF0U ) == MQTT_PACKET_TYPE_PUBLISH )
-    {
-        assert( pDeserializedInfo->pPublishInfo != NULL );
-        LogInfo( ( "pPublishInfo->pTopicName:%s.", pDeserializedInfo->pPublishInfo->pTopicName ) );
 
-        /* Let the Device Shadow library tell us whether this is a device shadow message. */
-        if( SHADOW_SUCCESS == Shadow_MatchTopicString( pDeserializedInfo->pPublishInfo->pTopicName,
-                                                       pDeserializedInfo->pPublishInfo->topicNameLength,
-                                                       &messageType,
-                                                       &pThingName,
-                                                       &thingNameLength,
-                                                       &pShadowName,
-                                                       &shadowNameLength ) )
+    LogInfo( ( "pPublishInfo->pTopicName:%s.", pPublishInfo->pTopicName ) );
+
+    /* Let the Device Shadow library tell us whether this is a device shadow message. */
+    if( SHADOW_SUCCESS == Shadow_MatchTopicString( pPublishInfo->pTopicName,
+                                                    pPublishInfo->topicNameLength,
+                                                    &messageType,
+                                                    &pThingName,
+                                                    &thingNameLength,
+                                                    &pShadowName,
+                                                    &shadowNameLength ) )
+    {
+        /* Upon successful return, the messageType has been filled in. */
+        if( messageType == ShadowMessageTypeUpdateDelta )
         {
-            /* Upon successful return, the messageType has been filled in. */
-            if( messageType == ShadowMessageTypeUpdateDelta )
-            {
-                /* Handler function to process payload. */
-                updateDeltaHandler( pDeserializedInfo->pPublishInfo );
-            }
-            else if( messageType == ShadowMessageTypeUpdateAccepted )
-            {
-                /* Handler function to process payload. */
-                updateAcceptedHandler( pDeserializedInfo->pPublishInfo );
-            }
-            else if( messageType == ShadowMessageTypeUpdateDocuments )
-            {
-                LogInfo( ( "/update/documents json payload:%s.", ( const char * ) pDeserializedInfo->pPublishInfo->pPayload ) );
-            }
-            else if( messageType == ShadowMessageTypeUpdateRejected )
-            {
-                LogInfo( ( "/update/rejected json payload:%s.", ( const char * ) pDeserializedInfo->pPublishInfo->pPayload ) );
-            }
-            else if( messageType == ShadowMessageTypeDeleteAccepted )
-            {
-                LogInfo( ( "Received an MQTT incoming publish on /delete/accepted topic." ) );
-                shadowDeleted = true;
-                deleteResponseReceived = true;
-            }
-            else if( messageType == ShadowMessageTypeDeleteRejected )
-            {
-                /* Handler function to process payload. */
-                deleteRejectedHandler( pDeserializedInfo->pPublishInfo );
-                deleteResponseReceived = true;
-            }
-            else
-            {
-                LogInfo( ( "Other message type:%d !!", messageType ) );
-            }
+            /* Handler function to process payload. */
+            updateDeltaHandler( pPublishInfo );
+        }
+        else if( messageType == ShadowMessageTypeUpdateAccepted )
+        {
+            /* Handler function to process payload. */
+            updateAcceptedHandler( pPublishInfo );
+
+        }
+        else if( messageType == ShadowMessageTypeUpdateDocuments )
+        {
+            LogInfo( ( "/update/documents json payload:%s.", ( const char * ) pPublishInfo->pPayload ) );
+        }
+        else if( messageType == ShadowMessageTypeUpdateRejected )
+        {
+            LogInfo( ( "/update/rejected json payload:%s.", ( const char * ) pPublishInfo->pPayload ) );
+        }
+        else if( messageType == ShadowMessageTypeDeleteAccepted )
+        {
+            LogInfo( ( "Received an MQTT incoming publish on /delete/accepted topic." ) );
+            shadowDeleted = true;
+            deleteResponseReceived = true;
+        }
+        else if( messageType == ShadowMessageTypeDeleteRejected )
+        {
+            /* Handler function to process payload. */
+            deleteRejectedHandler( pPublishInfo );
+            deleteResponseReceived = true;
         }
         else
         {
-            LogError( ( "Shadow_MatchTopicString parse failed:%s !!", ( const char * ) pDeserializedInfo->pPublishInfo->pTopicName ) );
-            eventCallbackError = true;
+            LogInfo( ( "Other message type:%d !!", messageType ) );
         }
     }
     else
     {
-        HandleOtherIncomingPacket( pPacketInfo, packetIdentifier );
+        LogError( ( "Shadow_MatchTopicString parse failed:%s !!", ( const char * ) pPublishInfo->pTopicName ) );
+        eventCallbackError = true;
     }
 }
 
@@ -1371,7 +1375,8 @@ static void shadowCallback( MQTTContext_t * pMqttContext,
  * loops to process incoming messages. Those are not the focus of this demo
  * and therefore, are placed in a separate file shadow_demo_helpers.c.
  */
-void device_shadow_main(void)
+
+const char * device_shadow_main(void)
 {
     int status = false;
     int demoRunCount = 0;
@@ -1408,7 +1413,7 @@ void device_shadow_main(void)
                 * Shadow document if exists. */
             LogInfo( ( "Publish to Shadow `delete` topic to attempt to delete the shadow doc." ) );
             LogInfo( ( "THING_NAME: %s", THING_NAME ) );
-            status = PublishToTopic( SHADOW_TOPIC_STR_DELETE( THING_NAME, SHADOW_NAME ),
+            status = PublishToTopicQoS1( SHADOW_TOPIC_STR_DELETE( THING_NAME, SHADOW_NAME ),
                                                SHADOW_TOPIC_LEN_DELETE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
                                                updateDocument,
                                                0U );
@@ -1417,7 +1422,7 @@ void device_shadow_main(void)
         /* Unsubscribe from the `/delete/accepted` and 'delete/rejected` topics.*/
         if( status == true )
         {
-            LogInfo( ( "Publish to Shadow `delete` topic to attempt to delete the shadow doc." ) );
+            LogInfo( ( "Unsubscribe from the `/delete/accepted` and 'delete/rejected` topics." ) );
             status = UnsubscribeFromTopic( SHADOW_TOPIC_STR_DELETE_ACC( THING_NAME, SHADOW_NAME ),
                                                      SHADOW_TOPIC_LEN_DELETE_ACC( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ) );
         }
@@ -1510,8 +1515,8 @@ void device_shadow_main(void)
             */
         if( status == true )
         {
-            /* desired heap size . */
-            LogInfo( ( "Send desired heap size." ) );
+            /* desired color . */
+            LogInfo( ( "Send desired color." ) );
 
             ( void ) memset( updateDocument,
                                 0x00,
@@ -1519,14 +1524,17 @@ void device_shadow_main(void)
 
             /* Keep the client token in global variable used to compare if
                 * the same token in /update/accepted. */
+            const char* randomColor = get_random_color_string();
+            strncpy(currentColor, randomColor, sizeof(currentColor) - 1);
+            currentColor[sizeof(currentColor) - 1] = '\0';
 
             snprintf( updateDocument,
                         SHADOW_DESIRED_JSON_LENGTH + 1,
                         SHADOW_DESIRED_JSON,
-                        ( int ) esp_get_free_heap_size(),
+                        currentColor,
                         clientToken );
 
-            status = PublishToTopic( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
+            status = PublishToTopicQoS1( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
                                             SHADOW_TOPIC_LEN_UPDATE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
                                             updateDocument,
                                             ( SHADOW_DESIRED_JSON_LENGTH + 1 ) );
@@ -1543,7 +1551,6 @@ void device_shadow_main(void)
             if( stateChanged == true )
             {
                 /* Report the latest power state back to device shadow. */
-                LogInfo( ( "Report to the state change: %"PRIu32"", currentHeap ) );
                 ( void ) memset( updateDocument,
                                     0x00,
                                     sizeof( updateDocument ) );
@@ -1554,10 +1561,10 @@ void device_shadow_main(void)
                 snprintf( updateDocument,
                             SHADOW_REPORTED_JSON_LENGTH + 1,
                             SHADOW_REPORTED_JSON,
-                            ( int ) currentHeap,
+                            currentColor,
                             clientToken );
 
-                status = PublishToTopic( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
+                status = PublishToTopicQoS1( SHADOW_TOPIC_STR_UPDATE( THING_NAME, SHADOW_NAME ),
                                                 SHADOW_TOPIC_LEN_UPDATE( THING_NAME_LENGTH, SHADOW_NAME_LENGTH ),
                                                 updateDocument,
                                                 ( SHADOW_REPORTED_JSON_LENGTH + 1 ) );
@@ -1597,7 +1604,9 @@ void device_shadow_main(void)
         }
     } while( status != true );
 
-    //return status;
+    LogInfo(("This is my currentColor, sending further: %s", currentColor));
+
+    return currentColor;
 }
 
 /*-----------------------------------------------------------*/

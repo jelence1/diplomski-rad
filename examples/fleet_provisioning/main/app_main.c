@@ -56,7 +56,7 @@
 
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
-void device_shadow_main(void);
+const char * device_shadow_main(void);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -455,18 +455,44 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 #define BLINK_LED_RMT_CHANNEL 0
 
 static led_strip_handle_t led_strip;
+const char* color_name = "WHITE";
 
-static void blink_led(uint8_t s_led_state)
+typedef struct {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} color_t;
+
+static void blink_led(uint8_t s_led_state, color_t color)
 {
     /* If the addressable LED is enabled */
     if (s_led_state) {
         /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
-        led_strip_set_pixel(led_strip, 0, 16, 16, 16);
+        led_strip_set_pixel(led_strip, 0, color.r, color.g, color.b);
         /* Refresh the strip to send data */
         led_strip_refresh(led_strip);
     } else {
         /* Set all LED off to clear all pixels */
         led_strip_clear(led_strip);
+    }
+}
+
+static color_t get_color_from_string(const char* color_name) {
+    if (strcmp(color_name, "RED") == 0) {
+        return (color_t){255, 0, 0};
+    } else if (strcmp(color_name, "GREEN") == 0) {
+        return (color_t){0, 255, 0};
+    } else if (strcmp(color_name, "BLUE") == 0) {
+        return (color_t){0, 0, 255};
+    } else if (strcmp(color_name, "YELLOW") == 0) {
+        return (color_t){255, 255, 0};
+    } else if (strcmp(color_name, "PINK") == 0) {
+        return (color_t){255, 0, 255};
+    } else if (strcmp(color_name, "WHITE") == 0) {
+        return (color_t){255, 255, 255};
+    } else {
+        ESP_LOGE(TAG, "Unknown color: %s", color_name);
+        return (color_t){255, 255, 255}; // Default to white
     }
 }
 
@@ -487,11 +513,17 @@ static void configure_led()
 
 void blinky_task(void *pvParameters) {
     uint8_t s_led_state = 0;
+    color_t color;
 
     configure_led();
 
     while (1) {
-        blink_led(s_led_state);
+        if (s_led_state == true) {
+            //color_name = get_random_color_string();
+            color = get_color_from_string(color_name);
+        }
+
+        blink_led(s_led_state, color);
         s_led_state = !s_led_state;
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -521,7 +553,7 @@ void publish_message_task(void *pvParameters) {
                 lvgl_port_unlock();
             }
         sendMessage(temperature, humidity, moisture);
-        device_shadow_main();
+        color_name = device_shadow_main();
 
         }
 

@@ -103,6 +103,11 @@ bool PublishToTopic( const char * pTopic,
                      const char * pMessage,
                      size_t messageLength );
 
+bool PublishToTopicQoS1( const char * pTopic,
+                     uint16_t topicLength,
+                     const char * pMessage,
+                     size_t messageLength );
+
 /**
  * @brief Invoke the core MQTT library's process loop function.
  *

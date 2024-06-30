@@ -1298,6 +1298,73 @@ bool PublishToTopic( const char * pTopicFilter,
 }
 /*-----------------------------------------------------------*/
 
+bool PublishToTopicQoS1( const char * pTopicFilter,
+                     uint16_t topicFilterLength,
+                     const char * pPayload,
+                     size_t payloadLength )
+{
+    bool returnStatus = false;
+    MQTTStatus_t mqttStatus = MQTTSuccess;
+    uint8_t publishIndex = MAX_OUTGOING_PUBLISHES;
+    MQTTContext_t * pMqttContext = &mqttContext;
+
+    assert( pMqttContext != NULL );
+    assert( pTopicFilter != NULL );
+    assert( topicFilterLength > 0 );
+
+    /* Get the next free index for the outgoing publish. All QoS1 outgoing
+     * publishes are stored until a PUBACK is received. These messages are
+     * stored for supporting a resend if a network connection is broken before
+     * receiving a PUBACK. */
+    returnStatus = getNextFreeIndexForOutgoingPublishes( &publishIndex );
+
+    if( returnStatus == false )
+    {
+        LogError( ( "Unable to find a free spot for outgoing PUBLISH message." ) );
+        cleanupOutgoingPublishes();
+    }
+    else
+    {
+        LogDebug( ( "Published payload: %.*s",
+                    ( int ) payloadLength,
+                    ( const char * ) pPayload ) );
+
+        /* This example publishes to only one topic and uses QOS1. */
+        outgoingPublishPackets[ publishIndex ].pubInfo.qos = MQTTQoS1;
+        outgoingPublishPackets[ publishIndex ].pubInfo.pTopicName = pTopicFilter;
+        outgoingPublishPackets[ publishIndex ].pubInfo.topicNameLength = topicFilterLength;
+        outgoingPublishPackets[ publishIndex ].pubInfo.pPayload = pPayload;
+        outgoingPublishPackets[ publishIndex ].pubInfo.payloadLength = payloadLength;
+
+        /* Get a new packet id. */
+        outgoingPublishPackets[ publishIndex ].packetId = MQTT_GetPacketId( pMqttContext );
+
+        /* Send PUBLISH packet. */
+        mqttStatus = MQTT_Publish( pMqttContext,
+                                   &outgoingPublishPackets[ publishIndex ].pubInfo,
+                                   outgoingPublishPackets[ publishIndex ].packetId );
+
+        if( mqttStatus != MQTTSuccess )
+        {
+            LogError( ( "Failed to send PUBLISH packet to broker with error = %s.",
+                        MQTT_Status_strerror( mqttStatus ) ) );
+            cleanupOutgoingPublishAt( publishIndex );
+            returnStatus = false;
+        }
+        else
+        {
+            LogDebug( ( "PUBLISH sent for topic %.*s to broker with packet ID %u.",
+                        topicFilterLength,
+                        pTopicFilter,
+                        outgoingPublishPackets[ publishIndex ].packetId ) );
+            cleanupOutgoingPublishAt( publishIndex );
+        }
+    }
+
+    return returnStatus;
+}
+/*-----------------------------------------------------------*/
+
 bool ProcessLoopWithTimeout( void )
 {
     uint32_t ulMqttProcessLoopTimeoutTime;
