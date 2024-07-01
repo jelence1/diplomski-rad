@@ -172,7 +172,7 @@ Na slikama \ref{fig:esp_softap_app1} i \ref{fig:esp_softap_app2} prikazana je mo
 
 Nakon uspješnog povezivanja na Wi-Fi, sljedeći je korak registracija uređaja na platformu AWS. Korištena je biblioteka za AWS IoT Fleet Provisioning koja se održava u sklopu projekta otvorenog koda \textit{FreeRTOS} \cite{fleet_prov_sdk}. Biblioteka omogućuje mnoštvu odn. floti IoT uređaja registraciju i instalaciju jedinstvenih certifikata na platformu. Bibliotekom je moguće uređaje registrirati i pomoću autoriziranog korisnika, ali i certifikatima zahtjeva. Ova biblioteka ne ovisi o dodatnim bibliotekama osim standardne C biblioteke i stoga se može koristiti s bilo kojom bibliotekom za MQTT protokol.
 
-Za potrebe ovog sustava odabrana je registracija pomoću certifikata zahtjeva. Na slici \ref{fig:fleet_provisioning_by_claim} prikazan je slijed događaja pri registraciji uređaja. Uređaj se najprije spaja na AWS certifikatom zahtjeva koji unaprijed postoji na mikrokontroleru te ostvaruje MQTT vezu. Zatim objavljuje praznu poruku na temu \textit{\$aws/certificates/create/json}, kojom zapravo podnosi zahtjev za kreiranjem vlastitog jedinstvenog certifikata. Usluga kreira traženi certifikat, pripadni ključ te generira značku vlasništva \engl{ownership token}, što sve skupa i objavljuje na temu \textit{\$aws/certificates/created/json/accepted}, na koju je uređaj pretplaćen. Razvojni sustav zatim sigurno pohranjuje dobivene vjerodajnice te objavljuje vlastite parametre i dobivenu značku na temu predloška za registraciju. Ako je kreirana, u sustavu AWS zatim se pokreće Lambda funkcija koja obavlja dodatne provjere nad dobivenim parametrima i tako provjerava valjanost zahtjeva. Primjerice, uređaj pri slanju parametara šalje i hardversku tajnu, koja se može zatim provjeriti u bazi podataka sustava AWS s pohranjenim takvim tajnama i provjeriti valjanost te tajne. Pri uspješnoj provjeri, Lambda funkcija vraća \lstinline|{"allowProvisioning" : True}|, čime daje konačno zeleno svjetlo za registraciju. Usluga posljedično kreira stvar i pripadnu politiku definiranu u predlošku te aktivira novostvoreni certifikat. Objavljuje novu konfiguraciju specifičnu za uređaj na temu za potvrdu uspješne registracije. Razvojni se sustav, nakon primjene nove konfiguracije, povezuje jedinstvenim privatnim ključem te certifikatom na AWS. Ova se nova MQTT veza dalje koristi za komunikaciju i razmjenu podataka. Ako je prvotno povezivanje neuspješno, aplikacija pokušava spojiti uređaj još dva puta prije nego se spajanje smatra potpuno neuspjelim. U tom slučaju, daljnje akcije čitanja mjerenja i slanja u oblak ne pokreću se jer je spajanje na platformu ključno za ostale radnje, stoga aplikacija izlazi iz glavnog programa. Jedino se ponovnim pokretanjem sustav može ponovno pokušati spojiti na internet i na platformu. 
+Za potrebe ovog sustava odabrana je registracija pomoću certifikata zahtjeva. Na slici \ref{fig:fleet_provisioning_by_claim} prikazan je slijed događaja pri registraciji uređaja. Uređaj se najprije spaja na AWS certifikatom zahtjeva koji unaprijed postoji na mikrokontroleru te ostvaruje MQTT vezu. Zatim objavljuje praznu poruku na temu \lstinline|\$aws/certificates/create/json|, kojom zapravo podnosi zahtjev za kreiranjem vlastitog jedinstvenog certifikata. Usluga kreira traženi certifikat, pripadni ključ te generira značku vlasništva \engl{ownership token}, što sve skupa i objavljuje na temu \lstinline|\$aws/certificates/created/json/accepted|, na koju je uređaj pretplaćen. Razvojni sustav zatim sigurno pohranjuje dobivene vjerodajnice te objavljuje vlastite parametre i dobivenu značku na temu predloška za registraciju. Ako je kreirana, u sustavu AWS zatim se pokreće Lambda funkcija koja obavlja dodatne provjere nad dobivenim parametrima i tako provjerava valjanost zahtjeva. Primjerice, uređaj pri slanju parametara šalje i hardversku tajnu, koja se može zatim provjeriti u bazi podataka sustava AWS s pohranjenim takvim tajnama i provjeriti valjanost te tajne. Pri uspješnoj provjeri, Lambda funkcija vraća \lstinline|{"allowProvisioning" : True}|, čime daje konačno zeleno svjetlo za registraciju. Usluga posljedično kreira stvar i pripadnu politiku definiranu u predlošku te aktivira novostvoreni certifikat. Objavljuje novu konfiguraciju specifičnu za uređaj na temu za potvrdu uspješne registracije. Razvojni se sustav, nakon primjene nove konfiguracije, povezuje jedinstvenim privatnim ključem te certifikatom na AWS. Ova se nova MQTT veza dalje koristi za komunikaciju i razmjenu podataka. Ako je prvotno povezivanje neuspješno, aplikacija pokušava spojiti uređaj još dva puta prije nego se spajanje smatra potpuno neuspjelim. U tom slučaju, daljnje akcije čitanja mjerenja i slanja u oblak ne pokreću se jer je spajanje na platformu ključno za ostale radnje, stoga aplikacija izlazi iz glavnog programa. Jedino se ponovnim pokretanjem sustav može ponovno pokušati spojiti na internet i na platformu. 
 
 \begin{figure}[ht]
 	\centering
@@ -181,11 +181,69 @@ Za potrebe ovog sustava odabrana je registracija pomoću certifikata zahtjeva. N
 	\label{fig:fleet_provisioning_by_claim}
 \end{figure}
 
-Opisani tok ostvaren je uz pomoć ranije spomenute biblioteke, kao i knjižice \textit{coreMQTT} za komunikaciju putem protokola MQTT s API-jem platforme AWS. Za manipulaciju certifikatima i privatnim ključevima, korištena je biblioteka \textit{corePKCS11}. Ona koristi standard PKCS \#11 \engl{Public-key Certificate Standards}, što je široko korišten API za manipuliranje uobičajenim kriptografskim objektima. Funkcije koje navodi omogućuju aplikacijama korištenje, stvaranje, modificiranje i brisanje kriptografskih objekata, bez izlaganja tih objekata memoriji aplikacije. Primjerice, konkretna integracija s bibliotekom za registraciju uređaja koristi mali podskup PKCS \#11 API-ja za, između ostalog, pristup privatnom ključu potrebnom za stvaranje mrežne veze koja je autentificirana i zaštićena protokolom TLS bez da aplikacija ikada dođe u doticaj s ključem \cite{what_is_pkcs}. 
+Opisani tok ostvaren je uz pomoć ranije spomenute biblioteke, kao i knjižice \textit{coreMQTT} za komunikaciju putem protokola MQTT s API-jem platforme AWS. Za manipulaciju certifikatima i privatnim ključevima, korištena je biblioteka \textit{corePKCS11}. Ona koristi standard PKCS \#11 \engl{Public-key Certificate Standards}, što je široko korišten API za manipuliranje uobičajenim kriptografskim objektima. Funkcije koje navodi omogućuju aplikacijama korištenje, stvaranje, modificiranje i brisanje kriptografskih objekata, bez izlaganja tih objekata memoriji aplikacije. Primjerice, konkretna integracija s bibliotekom za registraciju uređaja koristi mali podskup PKCS \#11 API-ja za, između ostalog, pristup privatnom ključu potrebnom za stvaranje mrežne veze koja je autentificirana i zaštićena protokolom TLS bez da aplikacija ikada dođe u doticaj s ključem \cite{what_is_pkcs}. Certifikati zahtjeva te korijenski certifikat platforme AWS pohranjeni su u memoriju tipa SPIFFS \engl{Serial Peripheral Interface Flash File System}. To je lagani datotečni sustav namijenjen serijskim (SPI) memorijama tipa \textit{flash}. Omogućava mikrokontrolerima korištenje integrirane memorije tipa \textit{flash} za pohranu datoteka na sličan način kao što se koriste datotečni sustavi na običnim računalima. Optimizirana je za česte operacije čitanja i pisanja. Ova vrsta memorije nalik je memoriji tipa EEPROM \engl{Electrically Erasable Programmable Read-Only Memory}, no SPIFFS ima značajnije prednosti u odnosu na EEPROM \cite{spiffs}:
+\begin{itemize}
+	\item nudi više prostora za pohranu,
+	\item organizira podatke u strukturu datotečnog sustava,
+	\item optimiziran za nasumične operacije čitanja i pisanja, 
+	\item posjeduje mehanizme za izjednačavanje trošenja koji pomažu pri ravnomjernoj rasporedi ciklusa pisanja po memoriji tipa \textit{flash},
+	\item nudi mogućnost upravljanja datotekama.
+\end{itemize}
 
-Sljedeći programski odsječak prikazuje uspostavu MQTT sjednice pomoću certifikata zahtjeva te podnošenje zahtjeva za novim certifikatom. U odsječku se također može primijetiti binarna serijalizacija podataka. Format CBOR \engl{Concise Binary Object Representation} Representation), za razliku od formata JSON, pretvara podatke u binarni oblik te ih tako šalje mrežom, što rezultira manjom latencijom i nosivošću \engl{payload} \cite{cbor}. Pri prijenosu velike količine podataka pri ograničenim resursima, poput u IoT sustava, ušteda na veličini poslanih podataka znatno utječe na efikasnost sustava. Isto tako, binaran je format prilagodljiv u odnosu na JSON, gdje mora postojati unaprijed definirana shema za primitak podataka.
+Sljedeći programski kod prikazuje inicijalizaciju memorije tipa SPIFFS. Ove se funkcije pokreću neposredno prije i nakon registracije uređaja u AWS, budući da je memorija potrebna samo za korištenje certifikata zahtjeva. Novi se certifikati direktno upisuju u objekt modula PKCS, stoga nije potrebno daljnje korištenje ovog datotečnog sustava.
+
+\begin{lstlisting}[caption={Inicijalizacije memorije tipa SPIFFS}, language=c]
+esp_vfs_spiffs_conf_t conf = {
+	.base_path = "/spiffs",
+	.partition_label = "spiffs_storage",
+	.max_files = 5,
+	.format_if_mount_failed = true
+};
+
+void filesystem_init(void)
+{
+	// Use settings defined above to initialize and mount SPIFFS filesystem.
+	esp_err_t ret = esp_vfs_spiffs_register(&conf);
+	
+	if (ret != ESP_OK) {
+		if (ret == ESP_FAIL) {
+			ESP_LOGE(TAG, "Failed to mount or format filesystem");
+		} else if (ret == ESP_ERR_NOT_FOUND) {
+			ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+		} else {
+			ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+		}
+		return;
+	}
+	
+	size_t total = 0, used = 0;
+	ret = esp_spiffs_info(conf.partition_label, &total, &used);
+	if (ret != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s). Formatting...", esp_err_to_name(ret));
+		esp_spiffs_format(conf.partition_label);
+		return;
+	} else {
+		ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+	}
+}
+
+void filesystem_deinit(void)
+{
+	// All done, unmount partition and disable SPIFFS
+	esp_vfs_spiffs_unregister(conf.partition_label);
+	ESP_LOGI(TAG, "SPIFFS unmounted");
+}
+\end{lstlisting}
+
+Sljedeći programski odsječak prikazuje uspostavu MQTT sjednice pomoću certifikata zahtjeva te podnošenje zahtjeva za novim certifikatom. Na samom početku najprije se certifikati s definiranom putanjom učitaju u modul PKCS za daljnje korištenje. U odsječku se također može primijetiti binarna serijalizacija podataka. Format CBOR \engl{Concise Binary Object Representation} Representation), za razliku od formata JSON, pretvara podatke u binarni oblik te ih tako šalje mrežom, što rezultira manjom latencijom i nosivošću \engl{payload} \cite{cbor}. Pri prijenosu velike količine podataka pri ograničenim resursima, poput u IoT sustava, ušteda na veličini poslanih podataka znatno utječe na efikasnost sustava. Isto tako, binaran je format prilagodljiv u odnosu na JSON, gdje mora postojati unaprijed definirana shema za primitak podataka.
 
 \begin{lstlisting}[caption={Spajanje certifikatom zahtjeva i zahtjev za novim certifikatom}, language=c]
+/* Insert the claim credentials into the PKCS #11 module */
+status = loadClaimCredentials( *p11Session,
+	CLAIM_CERT_PATH,
+	pkcs11configLABEL_CLAIM_CERTIFICATE,
+	CLAIM_PRIVATE_KEY_PATH,
+	pkcs11configLABEL_CLAIM_PRIVATE_KEY );
  LogInfo( ( "Establishing MQTT session with claim certificate..." ) );
  status = EstablishMqttSession( provisioningPublishCallback,
 		*p11Session,
@@ -545,7 +603,93 @@ Slika \ref{fig:rgb_lights} prikazuje nekoliko različitih boja LED diode koje se
 
 \subsection{Ažuriranje softvera}
 
-Programska potpora za ažuriranje softvera koristi OTA biblioteku u sklopu ranije spomenutog razvojnog paketa za integraciju platforme AWS i ESP32 uređaja. Primaju se MQTT poruke koje se prosljeđuju OTA agentu za moguću obradu. OTA agent koji je već razvijen u sklopu biblioteke obavlja glavni dio posla i provjerava je li mu dolazna MQTT poruka zapravo namijenjena. 
+Programska potpora za ažuriranje softvera koristi OTA biblioteku u sklopu ranije spomenutog razvojnog paketa za integraciju platforme AWS i ESP32 uređaja. Koristi se protokol HTTP za primanje datoteke ažuriranja radi manjeg konflikta s postojećom programskom potporom koja koristi MQTT za slanje poruka i sjenu uređaja. Za dodatno korištenje MQTT veze, bilo bi potrebno uvesti mehanizam dretvi i semafora radi sinkronizacije događaja i MQTT veze. 
+
+Za korištenje OTA funkcionalnosti potrebno je kreirati dodatne particije na uređaju. Koriste se dvije aplikacijske particije, što omogućava uređaju da zadrži radnu verziju \textit{firmwarea} dok se novi preuzima i instalira na drugu particiju. Na taj način, ako dođe do problema tijekom preuzimanja ili instalacije novog softvera, uređaj se može sigurno vratiti na prethodnu verziju \engl{rollback} i nastaviti rad bez prekida. Također, dodatna particija omogućava neometan rad trenutnog programa dok se novi preuzima u pozadini, pogotovo u slučajevima loše mreže ili velike količine podataka. To smanjuje i vrijeme neaktivnosti. Nadalje, potrebna je i treća particija koja je podatkovna. Ona se koristi za čuvanje metapodataka vezanih za OTA ažuriranja. Ti podaci uključuju informacije kao što su trenutno aktivna aplikacija odnosno koja se particija koristi, status posljednjeg ažuriranja, te informacije potrebne za odlučivanje o prebacivanju između particija nakon ponovnog pokretanja uređaja. Kad se novo ažuriranje preuzme i instalira na drugu particiju, podatkovna se particija ažurira s informacijama koju particiju treba učiti pri sljedećem pokretanju. Tako uređaj može zaključiti koju particiju treba koristiti pri ponovnom pokretanju. Isto tako, ova particija može sadržavati informacije o verifikaciji integriteta i valjanosti novog \textit{firmwarea}. Primjerice, može sadržavati digitalne potpise koji se koriste je li novi softver ispravno preuzet i da nije modificiran. 
+
+\begin{table}[ht!]
+	\centering
+	\caption{Particije na uređaju}
+	\begin{tabular}{|c| c| c| c| c|}
+		\hline
+		\rowcolor{lightblue}  
+		\textbf{Ime} & \textbf{Vrsta} & \textbf{Podvrsta} & \textbf{Pomak} & \textbf{Veličina} \\ \hline
+		\textit{nvs} & data & nvs & 0x9000 & 24K \\ \hline
+		\textit{storage} & data & nvs &   & 16K \\ \hline
+		\textit{phy\_init} & data & phy &   & 4K \\ \hline
+		\textit{factory} & app & factory &   & 1800K \\ \hline
+		\textit{spiffs\_storage} & data & spiffs &   & 960K \\ \hline
+		\textit{otadata} & data & ota &   & 8K \\ \hline
+		\textit{ota\_0} & app & ota\_0 &   & 500K \\ \hline
+		\textit{ota\_1} & app & ota\_1 &   & 500K \\ \hline
+	\end{tabular}
+	\label{table:partitions}
+\end{table}
+
+Tablica \ref{table:partitions} prikazuje sve particije na uređaju, njihove vrste i veličine. Osim ranije opisanih particija potrebnih za OTA ažuriranja, tu se nalazi još nekoliko particija neophodnih za rad sustava. Navedene su i ranije opisane particije memorija tipa NVS i SPIFFS. Particija \textit{factory} služi za pohranu osnovnog \textit{firmwarea} koji je inicijalno programiran na uređaj. Particija \textit{phy\_init} koristi se za pohranu konfiguracijskih podataka fizičkog sloja \engl{Physical Layer - PHY}. Odnosi se na fizičke karakteristike bežične komunikacije poput kalibracijskih parametara i postavki za Wi-Fi. Particija NVS koristi se za pohranu Wi-Fi vjerodajnica, a posljednja particija \textit{storage} također je vrsta memorije tipa NVS, no koristi se za pohranu novodobivenih certifikata od AWS-a. Kada se zbroje veličine svih particija, iznos je jednak otprilike 4 MB, što je jednako veličini memorije tipa \textit{flash} na uređaju ESP32-C3. Budući da su particije za OTA softver znatno manje nego izvorna memorija, primljeno ažuriranje mora biti manjeg opsega u odnosu na izvorni \textit{firmware}.
+
+Iako se u razvijenom sustavu koristi HTTP za OTA ažuriranje, i dalje je potrebna MQTT veza. Razvojni sustav mora se pretplatiti na sve teme iz isječaka 4.6. i 4.7. radi  upravljanje OTA procesom, uključujući primanje obavijesti o novim ažuriranjima, praćenje statusa preuzimanja i instalacije, te prijavljivanje grešaka. Protokol HTTP koristi se isključivo za preuzimanje softvera. Budući da se koriste oba protokola, potrošnja memorije je nešto veća.
+
+Kao što je spomenuto u ranijem poglavlju, OTA agent služi za pojednostavljenje OTA ažuriranja. Agent funkcionira kao kompleksan proces koji omogućuje sigurno i pouzdano ažuriranje softvera preko mreže. Pretplaćuje na teme poslova kako bi pratio nadolazeća ažuriranja i obavijesti o novim OTA zadacima. Kada primi poruku, agent provjerava sadržaj zadatka, uključujući provjeru integriteta i autentičnosti dobivene datoteke pomoću digitalnih potpisa koja se vrši lokalno pohranjenim certifikatom. Taj certifikat mora biti jednak certifikatu koji je korišten za potpisivanje dobivene datoteke. Generiran je lokalno na računalu pomoću biblioteke \textit{OpenSSL} i isto tako kasnije korišten za potpis datoteke u oblaku. Za generiranje certifikata i njemu pripadnog privatnog ključa korišten je algoritam ECDSA \engl{Elliptic Curve Digital Signature Algorithm}. Kada je zadatak potvrđen, agent koristi protokol HTTP za preuzimanje softvera sa specificiranog URL-a. Tijekom preuzimanja, agent provjerava integritet koristeći \textit{hash} algoritme. \textit{Firmware} se preuzima u jednu od OTA particija te nakon kompletnog preuzimanja, agent još jednom provjerava integritet cijele datoteke prije nego nastavi s instalacijom. Ako je novi kod valjan, konfigurira program za pokretanje uređaja \engl{bootloader} da koristi novu particiju pri idućem pokretanju. Naposljetku ponovno pokreće uređaj da se pokrene nova verzija softvera. Tokom cijelog opisanog procesa, agent paralelno šalje statuse natrag platformi putem MQTT veze. Poruke uključuju informacije o početku preuzimanja, napretku, uspjehu ili neuspjehu preuzimanja te instalaciji. 
+
+Sljedeći programski isječak prikazuje pokretanje OTA agenta. Veći dio funkcionalnosti OTA agenta integriran je u korištenu biblioteku koja interno obavlja rad agenta. Funkcija radi na sljedeći način:
+\begin{enumerate}
+	\item inicijalizira se OTA agent,
+	\item pokrene se petlja koja omogućuje OTA ažuriranje i vraća statistiku o primljenim paketima svake sekunde,
+	\item u slučaju prekida MQTT veze, obustavljaju se sve operacije OTA agenta. 
+\end{enumerate}
+
+\begin{lstlisting}[caption={Rad OTA agenta}, language=c]
+    /* Set OTA Library interfaces.*/
+setOtaInterfaces( &otaInterfaces );
+
+/* Set OTA Code Signing Certificate */
+otaPal_SetCodeSigningCertificate( pcAwsCodeSigningCertPem );
+
+/* Init OTA Library. */
+otaRet = OTA_Init( &otaBuffer,
+&otaInterfaces,
+( const uint8_t * ) ( CLIENT_IDENTIFIER ),
+otaAppCallback );
+
+/* Create OTA Task. */
+pthread_create( &threadHandle, NULL, otaThread, NULL )
+
+/* OTA Demo loop. */
+
+/* Wait till OTA library is stopped, output statistics for currently running
+* OTA job */
+while( ( ( state = OTA_GetState() ) != OtaAgentStateStopped ) )
+{
+	/* Loop to receive packet from transport interface. */
+	mqttStatus = MQTT_ProcessLoop( &mqttContext );
+	
+	if( ( mqttStatus == MQTTSuccess ) || ( mqttStatus == MQTTNeedMoreBytes ) )
+	{
+		/* Get OTA statistics for currently executing job. */
+		OTA_GetStatistics( &otaStatistics );
+		
+		LogInfo( ( " Received: %"PRIu32"   Queued: %"PRIu32"   Processed: %"PRIu32"   Dropped: %"PRIu32"",
+		otaStatistics.otaPacketsReceived,
+		otaStatistics.otaPacketsQueued,
+		otaStatistics.otaPacketsProcessed,
+		otaStatistics.otaPacketsDropped ) );
+		
+		Clock_SleepMs( OTA_EXAMPLE_LOOP_SLEEP_PERIOD_MS );
+	}
+	
+	if (mqttSessionEstablished != true)
+	{
+		/* Suspend OTA operations. */
+		otaRet = OTA_Suspend();
+	}
+}
+
+/* Wait for OTA Thread. */
+returnJoin = pthread_join( threadHandle, NULL );
+\end{lstlisting}
+
+Kao što je opisano, po primitku MQTT poruke o dostupnom ažuriranju, kreira se HTTP zahtjev za dohvatom novog softvera. Uređaj koristi URL adržan u MQTT poruci kako bi započeo preuzimanje novog koda. Koristi se GET zahtjev za preuzimanje datoteke, a URL može biti poveznica na AWS S3 pohranu ili pak neki drugi poslužitelj koji je postavljen za distribuciju \textit{firmwarea}. U ovom slučaju, koristi se AWS S3 za dohvat datoteke. Odgovor na zahtjev jest datoteka koja se preuzima u segmentima. Sljedeći isječak prikazuje kreiranje zahtjeva te spajanje na S3 odakle će se preuzeti datoteka. Funkcija za obradu primljenog odgovora \lstinline|handleHttpResponse()| stavlja događaj u međuspremnik odakle će agent preuzeti zadatak. 
 
 \section{Programska potpora za oblak}
 
@@ -603,7 +747,7 @@ Podaci poslani protokolom MQTT u ranije prikazanom formatu JSON šalju se platfo
 
 Primljeni se podaci moraju pohraniti u bazu podataka kako bi se kasnije mogli koristiti za pregled i analizu. AWS nudi uslugu preusmjeravanja poruka \engl{message routing} protokom podataka između povezanih uređaja i aplikacija. Koristi pravila za usmjeravanje \engl{rules engine} kako bi obradila i preusmjerila poruke koje dolaze s uređaja prema drugim uslugama ili vanjskim krajnjim točkama. Moguće je usmjeriti poruke izravno prema sustavima za pohranu koji se nude u sklopu AWS usluga, no isto tako i prema Lambda funkcijama koje mogu vršiti detaljniju obradu podataka. Pravila usmjeravanja definiraju se SQL upitima nad MQTT temama, čime se omogućava filtriranje, transformacija i usmjeravanje podataka na osnovu specifičnih kriterija. Upitima je moguće izdvojiti specifična polja iz JSON poruka ili pak računati nove vrijednosti na temelju dobivenih. 
 
-Svaka ruta mora imati jedinstveno ime te upit kojim se dohvaćaju podaci. Upit je standardan SQL upit, no izvor podataka je tema na koju dolaze poruke u AWS. Unutar tema također je moguće koristiti i zamjenske znakove \engl{wildcards} kako bi upit odgovarao više tema. U razvijenom sustavu korišten je upit koji obuhvaća sve teme na koje uređaji šalju svoje podatke, neovisno o serijskom broju uređaja.
+Svaka ruta mora imati jedinstveno ime te upit kojim se dohvaćaju podaci. Upit je standardan SQL upit, no izvor podataka je tema na koju dolaze poruke u AWS. Unutar tema također je moguće koristiti i zamjenske znakove \engl{wildcards} kako bi upit odgovarao više tema. U razvijenom sustavu korišten je upit koji obuhvaća sve teme na koje uređaji šalju svoje podatke, neovisno o serijskom broju uređaja. Upit se nalazi u sljedećem odlomku koda. 
 
 \begin{lstlisting}[caption={SQL upit rute za podatke s uređaja}, language=sql]
 	SELECT * FROM 'device/+/data' 
@@ -777,3 +921,25 @@ Slika \ref{fig:influxdb_state} prikazuje podatke sjene uređaja u sučelju baze 
 \end{figure}
 
 \subsection{Ažuriranje softvera}
+
+Kako bi se mogao kreirati posao OTA ažuriranja i poslati uređaju, potrebno je nekoliko preduvjeta. Najprije, certifikat koji uređaj dobije mora imati omogućenu politiku poslova odnosno \textit{JobPolicy}. AWS nakon kreiranja certifikata na zahtjev automatski dodjeljuje ovu politiku certifikatu odnosno uređaju. Nadalje, potrebno je kreirati S3 kantu koja će služiti kao pohrana binarnih datoteka ažuriranja. Isto tako, potrebno je kreirati novu ulogu u sigurnosnom centru AWS-a koja će omogućava pristup usluzi AWS IoT Jobs, S3 pohrani te resursima za potpisivanje koda. Naposljetku, certifikat potpisivanja koda mora se učitati u oblak kako bi se njime potpisivale datoteke za slanje putem HTTP zahtjeva. 
+
+Što se tiče kreiranja spremnika u S3 pohrani, moguće je odabrati između dvije vrste spremnika - spremnik opće namjene \engl{general purpose} ili spremnik imenika \engl{directory bucket}. Spremnik opće namjene zadana je vrsta spremnika koji se koristi za većinu slučajeva upotrebe u S3. Podržavaju sve S3 značajke i većinu klasa pohrane. Spremnici imenika koriste se za poslove koji zahtijevaju nisku latenciju. Mogu podržati stotine tisuća transakcija u sekundi, neovisno o broju direktorija unutar spremnika. Za razliku od spremnika opće namjene, spremnici imenika organiziraju ključeve hijerarhijski u direktorije umjesto korištenja prefiksa za organizaciju objekata. Spremnici se kreiraju na globalnoj razini te se regionalno repliciraju za visoku dostupnost i otpornost od ispadanja. Za potrebe razvijenog sustava kreiran je spremnik opće namjene \textit{esp32ota-jgavran}. U njega je pohranjena binarna datoteka koja služi za demonstraciju OTA ažuriranja, a to je jednostavan program \textit{blink.bin} koji periodički pali i gasi LED diodu. Svi korisnici imaju pravo čitanja iz kreiranog spremnika za lakši pristup objektu. 
+
+Lokalno kreirani certifikat s pripadnim privatnim ključem učitan je u sustav kako bi se njime digitalno potpisala binarna datoteka prije slanja na uređaj i tako potvrdila valjanost i cjelovitost datoteke. Isto tako, kreirana je uloga \textit{OTARole} koja će stvorenom OTA poslu omogućiti pristup uslugama AWS IoT Jobs, pohrani te potpisivanju koda. Popis dozvola koje uloga ima nalazi se na slici \ref{fig:otarole}.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.4]{imgs/otarole}
+	\caption{Popis dozvola uloge \textit{OTARole}}
+	\label{fig:otarole}
+\end{figure}
+
+Posao se stvori tako što se u sučelju odabere opcija za stvaranje FreeRTOS OTA posla te unese ime posla. Nadalje, odabiru se uređaji za ažuriranje kao i protokol kojim će se podaci slati. AWS istovremeno može slati ažuriranje putem MQTT i HTTP veze, a uređaj će poslati zahtjev u obliku u kojem podržava preuzimanje. Nadalje je potrebno odabrati datoteku iz S3 pohrane, kao i certifikat kojim će se datoteka potpisati. Potpisana datoteka, osim što se šalje odabranim protokolom na ciljne uređaje, automatski se pohranjuje u S3 spremnik. Ovisno o konfiguraciji ciljnog uređaja, potrebno je navesti i putanju gdje će se datoteka pohraniti na uređaj. Zadnji korak prije kreiranja posla potrebno je odabrati hoće li posao biti kontinuirani ili jednokratni. Budući da ne postoji grupa uređaja kojoj je moguće dodijeliti kontinuirani posao, odabire se jednokratni. Također je moguće postaviti i konfiguraciju postupnog uvođenja, bilo statičkom stopom definirajući maksimalan broj uređaja u minuti, ili eksponencijalnom stopom s faktorom povećanja. Dostupne su i postavke otkazivanja posla ukoliko su zadovoljeni kriteriji, poput broja uređaja koji su posao izvršili s porukom \textit{rejected} ili \textit{failed}. Slika \ref{fig:otajob} prikazuje kako se mijenjaju stanja OTA posla nakon kreiranja. 
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.5]{imgs/otajob}
+	\caption{Stanja pokrenutog jednokratnog OTA posla}
+	\label{fig:otajob}
+\end{figure}
