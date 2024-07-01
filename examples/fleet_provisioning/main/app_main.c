@@ -57,6 +57,7 @@
 int fleet_provisioning_main(CK_SESSION_HANDLE *p11Session);
 void sendMessage(float temperature, float humidity, float moisture);
 const char * device_shadow_main(void);
+int aws_iot_main(void);
 
 static const char *TAG = "FLEET_PROVISIONING_EXAMPLE";
 
@@ -984,5 +985,7 @@ void app_main()
             NULL);                      // Task handle
 
     //pkcs11CloseSession( p11Session );
+
+    aws_iot_main();
 
 }

@@ -10,6 +10,8 @@ set(EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/examples/common_components/protocol_exa
 						 "${CMAKE_CURRENT_LIST_DIR}/../../libraries/common/posix_compat"
 						 "${CMAKE_CURRENT_LIST_DIR}/../../libraries/Device-Shadow"
 						 "${CMAKE_CURRENT_LIST_DIR}/../../libraries/coreJSON"
+						 "${CMAKE_CURRENT_LIST_DIR}/../../libraries/ota-for-aws"
+						 "${CMAKE_CURRENT_LIST_DIR}/../../libraries/coreHTTP"
 	)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
@@ -20,3 +22,9 @@ project(fleet_provisioning)
 # the generated image should be flashed when the entire project is flashed to
 # the target with 'idf.py -p PORT flash'.
 spiffs_create_partition_image(spiffs_storage ./spiffs_image FLASH_IN_PROJECT)
+
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "ota/certs/http_root_cert_auth.crt" TEXT)
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "ota/certs/aws_codesign.crt" TEXT)
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "ota/certs/root_cert_auth.crt" TEXT)
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "ota/certs/client.crt" TEXT)
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "ota/certs/client.key" TEXT)

@@ -241,4 +241,30 @@
  */
 #define SHADOW_NAME_LENGTH    ( ( uint16_t ) ( sizeof( SHADOW_NAME ) - 1 ) )
 
+/**
+ * @brief AWS IoT Core server port number for HTTPS connections.
+ *
+ * For this demo, an X.509 certificate is used to verify the client.
+ *
+ * @note Port 443 requires use of the ALPN TLS extension with the ALPN protocol
+ * name being x-amzn-http-ca. When using port 8443, ALPN is not required.
+ */
+#ifndef AWS_HTTPS_PORT
+    #define AWS_HTTPS_PORT    443
+#endif
+
+/**
+ * @brief Configure application version.
+ */
+
+#define APP_VERSION_MAJOR         0
+#define APP_VERSION_MINOR         0
+#define APP_VERSION_BUILD         1
+
+/**
+ * @brief The name of the library used and its version, following an "@"
+ * symbol.
+ */
+#define OTA_LIB                   "otalib@1.0.0"
+
 #endif /* ifndef DEMO_CONFIG_H_ */

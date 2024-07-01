@@ -11,11 +11,16 @@ set(COMPONENT_SRCS
 	"i2c.c"
 	"adc.c"
 	"moisture.c"
+	"ota_demo_core_http.c"
+	"http_demo_url_utils.c"
+	"mqtt_subscription_manager.c"
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS
 	"."
 	"${CMAKE_CURRENT_LIST_DIR}"
+	"${PROJECT_DIR}/../../libraries/common/logging/"
+	"${PROJECT_DIR}/../../libraries/common/posix_compat/"
 	)
 
 idf_component_register(SRCS "lvgl_demo_ui.c" "${COMPONENT_SRCS}"
