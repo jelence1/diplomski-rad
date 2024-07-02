@@ -13,6 +13,15 @@ AWS pruža usluge iz mnogo podatkovnih centara \engl{data center - DC} koji su r
 	\item poboljšana sigurnost: fizički odvojeni podatkovni centri smanjuju rizik od pojedinačnih točaka neuspjeha i omogućavaju implementaciju složenijih sigurnosnih strategija.
 \end{enumerate}
 
+Slika \ref{fig:aws_regions} prikazuje odnos regija, zona dostupnosti i podatkovnih centara unutar platforme AWS. Kao što je opisano, svaka regija ima više zona dostupnosti, i isto tako svaka zona ima nekoliko podatkovnih centara među kojima su podaci replicirani. 
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.6]{imgs/aws_regions}
+	\caption{Odnos regija, zona dostupnosti i podatkovnih centara u AWS-u \cite{ec2}}
+	\label{fig:aws_regions}
+\end{figure}
+
 Također, nude se brojne mogućnosti za razvojne inženjere u sklopu AWS-a. Nudi alate naredbenog retka \engl{command-line tools} i pakete za razvoj programa \engl{Software Development Kit - SDK} za puštanje aplikacija u produkciju \engl{deployment} i upravljanje vlastitim uslugama i aplikacijama. Paketi za razvoj programa dostupni su u raznim programskim jezicima, uključujući programske jezike C++, Android, iOS, Java, Node.js, Python i Ruby.
 
 AWS isto tako nudi brojne usluge za razvoj IoT sustava. Usluga AWS-a za IoT pruža platformu za upravljanje IoT uređajima te obradu podataka i njihovu pohranu na druge AWS usluge, poput baze podataka. AWS IoT pruža usluge u oblaku koje povezuju IoT uređaje s drugim uređajima i uslugama AWS-a u oblaku. Također pruža softver za uređaje, poput paketa za razvoj programa, za jednostavniju integraciju s uslugama AWS-a za IoT. Na slici \ref{fig:aws_iot_arch} nalazi se prikaz arhitekture usluga koje AWS nudi za razvoj IoT sustava.
