@@ -32,26 +32,29 @@ Pri kreiranju instance potrebno je definirati i njezinu vrstu. Vrsta koja se nav
 	\item optimizirane memorije \engl{memeory optimized},
 	\item optimizirane pohrane \engl{storage optimized}, 
 	\item ubrzanog računanja \engl{accelerated computing},
-	\item računanje visokih performansi \engl{high-performance computing}.
+	\item računanja visokih performansi \engl{high-performance computing}.
 \end{itemize}
 
 Vrstu instance potrebno je odabrati na temelju zahtjeva same aplikacije. Isto tako, pri kreiranju instance, uvijek je potrebno voditi računa o odabiru regije - optimalno je odabrati regiju kojoj je klijentski promet najbliži.
 
-Za potrebe razvijenog sustava, kreirana je EC2 instanca opće namjene s najmanjim resursima budući da je klijentski promet jako malen, odnosno vrlo malo korisnika treba pristup aplikaciji. Operacijski sustav na kreiranoj instanci je Linux radi lakšeg spajanja na instancu i pokretanja web aplikacije putem komandne linije. Pri stvaranju instance kreirana je nova sigurnosna grupa koja omogućava spajanje na virtualno računalo putem SSH klijenta.
+Za potrebe razvijenog sustava, kreirana je EC2 instanca opće namjene s najmanjim resursima budući da je klijentski promet jako malen, odnosno vrlo malo korisnika pristupa aplikaciji. Također, pridružena joj je instanca spremnika za pohranu veličine 8 GB. Operacijski sustav na kreiranoj instanci aplikacije jest Linux radi lakšeg spajanja na instancu i pokretanja web aplikacije putem komandne linije. Pri stvaranju instance kreirana je nova sigurnosna grupa koja omogućava spajanje na virtualno računalo putem SSH klijenta.
 
-%%TODO finish this
+Instanci je automatski dodijeljena virtualna privatna mreža \engl{Virtual Private Cloud - VPC} koja predstavlja izolirani virtualni mrežni prostor unutar AWS infrastrukture. Omogućava potpunu kontrolu nad mrežnim okruženjem, uključujući izbor vlastitog IP adresnog prostora, konfiguraciju podmreža, postavljanje usmjeravanja i pristupnih kontrola mreže. Svaka je virtualna privatna mreža podijeljena na manje dijelove mreže zvane podmreže. One mogu biti privatne ili javne te se automatski za svaku mrežu kreiraju tri podmreže. Svaka je kreirana podmreža prema zadanim postavkama privatna, te je za pristup instanci odnosno aplikaciji koja se nalazi za njom potreban javni pristup. Iako omogućavanje javnog pristupa znači da svatko može pristupiti IP adresi instance s interneta, unošenje IP adrese pri svakom pristupu aplikaciji nije prilagođeno korisniku, što narušava korisničko iskustvo korištenja aplikacije. Stoga je potrebno uvesti komponentu za balansiranje opterećenja \engl{load balancer}. Balanseri preusmjeravaju korisničke zahtjeve na manje opterećene instance i tako ravnomjerno raspoređuju ulazni promet. Budući da je u razvijenom sustavu korištena samo jedna instanca na kojoj se pokreće aplikacija, ovdje je primarna svrha balansera pružiti DNS naziv koji će biti javno dostupan korisnicima, i tako poboljšati iskustvo korištenja aplikacije. 
 
-Kako bi se maksimalno izoliralo izvođenje aplikacije i tako ostavilo prostora za izvršavanje drugih procesa na virtualnom računalu, aplikacija je pokrenuta pomoću Dockera. Sljedeći programski isječak prikazuje naredbu za preuzimanje i pokretanje Docker slike za Grafanu. Isto tako, potrebno je izložiti vrata na kojoj se pokreće aplikacija kako bi joj se moglo pristupiti. 
+Aplikacijskoj instanci potrebno je dodijeliti pravila za ulazne zahtjeve, odnosno omogućiti TCP komunikaciju s podmreže u kojoj se nalazi balanser. Tim se pravilom omogućuje prolaz zahtjeva s balansera prema aplikacijskoj instanci. Isto tako, iz sigurnosnih razloga poželjno je koristiti protokol HTTPS za pristup balanseru. Za korištenje protokola HTTPS potrebno je učitati certifikat, no budući da domena na kojoj se nalazi balanser nije službeno registrirana, ne posjeduje niti službeno potpisani certifikat. Stoga je lokalno kreiran samopotpisani certifikat pomoću biblioteke \textit{OpenSSL} i zatim učitan u oblak. Slika \ref{fig:load_balancer} prikazuje mrežnu povezanost balansera i instance na kojoj se nalazi aplikacija. Balanser sluša promet na vratima 443, što su vrata za protokol HTTPS. Dolazni zahtjevi prosljeđuju se skupini ciljnih instanci, ovdje pod nazivom \textit{GrafanaTargetGroup}, u kojoj se mogu nalaziti sve buduće stvorene instance na kojima se pokreće aplikacija. Nadalje, promet se prosljeđuje ciljnoj instanci koja je dostupna na vratima 3000. Na tim je istim vratima pokrenuta aplikacija. 
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.7]{imgs/load_balancer}
+	\caption{Mrežna povezanost balansera i aplikacijske instance}
+	\label{fig:load_balancer}
+\end{figure}
+
+Kako bi se maksimalno izoliralo izvođenje aplikacije i tako ostavilo prostora za izvršavanje drugih procesa na virtualnom računalu, na instanci EC2 aplikacija je pokrenuta pomoću alata Docker radi kontejnerizacije aplikacije. Sljedeći programski isječak prikazuje naredbu za preuzimanje i pokretanje Docker slike za Grafanu. Isto tako, potrebno je izložiti vrata na kojoj se pokreće aplikacija kako bi joj se moglo pristupiti. Korištena je slika verzije otvorenog koda.
 
 \begin{lstlisting}[caption={Pokretanje Docker slike za Grafanu}, language=bash]
-docker run -d -p 3000:3000 --name=grafana grafana/grafana-oss
+	docker run -d -p 3000:3000 --name=grafana grafana/grafana-oss
 \end{lstlisting}
-
-%%TODO finish this
-
-Instanci je automatski dodijeljena virtualna privatna mreža \engl{Virtual Private Cloud - VPC} koja predstavlja izolirani virtualni mrežni prostor unutar AWS infrastrukture. Omogućava potpunu kontrolu nad mrežnim okruženjem, uključujući izbor vlastitog IP adresnog prostora, konfiguraciju podmreža, postavljanje usmjeravanja i pristupnih kontrola mreže. Svaka je virtualna privatna mreža podijeljena na manje dijelove mreže zvane podmreže. One mogu biti privatne ili javne. 
-
-
 
 %Ovdje opisati stvaranje mrežnog.. nečeg u AWS-u, load balancing i sve što sam već morala kreirati da bih podigla samu aplikaciju na koliko-toliko siguran način. Spomeni povezivanje na SSH i docker i sve. Ipak to spada pod infrastrukturu. 
 
