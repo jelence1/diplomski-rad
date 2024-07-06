@@ -56,6 +56,26 @@
 	{]}{{{\color{darkblue}{]}}}}{1},
 }
 
+\lstdefinelanguage{flux}{
+	breaklines=true,
+	frame=single,
+	morekeywords=[1]{from},
+	morekeywords=[2]{range, filter, last},
+	morekeywords=[3]{group, pivot, keep, drop},
+	morekeywords=[4]{count, map, yield},
+	keywordstyle=[1]\color{darkblue},
+	keywordstyle=[2]\color{blue},
+	keywordstyle=[3]\color{magenta},
+	keywordstyle=[4]\color{codegreen},
+	morestring=[b]",
+	stringstyle=\color{codepurple},
+	sensitive=true,
+	commentstyle=\color{codegray}\ttfamily,
+	morecomment=[l]{//},
+	morecomment=[s]{/*}{*/}
+}
+
+
 \renewcommand*{\lstlistingname}{Isječak koda}
 \renewcommand*\lstlistlistingname{Popis isječaka koda}
 
