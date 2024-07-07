@@ -1,5 +1,9 @@
 \chapter{Zaključak}
 
-Moj zaključak.
+Na razvojnom sustavu ESP32-C3-DevKitM-1 implementiran je sustav za nadzor poljoprivredne površine. Na uređaj je spojena senzorska mreža koja mjeri uvjete okoline, odnosno temperaturu i vlagu zraka te vlažnost zemlje. Razvojni je sustav dinamički spojen na Wi-Fi mrežu te se očitana mjerenja šalju protokolom MQTT na platformu AWS. Platforma obrađuje primljene podatke i pohranjuje ih u bazu podataka InfluxDB. Uređaj isto tako šalje posljednje poznato stanje LED diode koje platforma također sprema u bazu. Pohranjeni podaci vizualizirani su u web aplikaciji temeljenoj na aplikaciji Grafana. Kreirani su grafovi koji prikazuju mjerene parametre kroz vrijeme, kao i njihove trenutne vrijednosti. Stvoren je i alarmni sustav koji obavještava o nepovoljnim uvjetima poljoprivredne površine. 
+
+Implementacija ovog sustava za poljoprivredni nadzor značajan je doprinos preciznoj poljoprivredi omogućujući poljoprivrednicima da prate i upravljaju uvjetima na svojim gospodarstvima u stvarnom vremenu. Korištenjem senzorske mreže poljoprivrednici mogu dobiti točne i aktualne informacije o mikroklimatskim uvjetima. Bežično povezivanje i slanje omogućuje kontinuirano praćenje i brzu reakciju na promjene uvjeta, što je ključno za optimizaciju resursa. Isto tako, ispad uređaja iz bežične mreže ne koči funkcionalnost sustava koji pohranjuje posljednje poznato stanje. Alarmni sustav poboljšava sposobnost brzog odgovora i preventivnog djelovanja, smanjujući rizik od oštećenja usjeva i osiguravajući optimalne uvjete za rast biljaka. Na ovaj način, implementirani IoT sustav ne samo da poboljšava efikasnost i produktivnost, već i smanjuje troškove te negativan utjecaj na okoliš, što je u skladu s ciljevima održive i precizne poljoprivrede.
+
+
 
 \eject

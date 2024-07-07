@@ -121,14 +121,14 @@ Sljedeće slike prikazuju red sa senzorskim očitanjima. Prva tri panela sa slik
 
 \begin{figure}[ht]
 	\centering
-	\includegraphics[scale=0.4]{imgs/grafana_data_1}
+	\includegraphics[scale=0.35]{imgs/grafana_data_1}
 	\caption{Trenutno izmjerena senzorska mjerenja i temperatura kroz vrijeme}
 	\label{fig:grafana_data_1}
 \end{figure}
 
 \begin{figure}[ht]
 	\centering
-	\includegraphics[scale=0.4]{imgs/grafana_data_2}
+	\includegraphics[scale=0.35]{imgs/grafana_data_2}
 	\caption{Vlažnost zraka i zemlje kroz vrijeme}
 	\label{fig:grafana_data_2}
 \end{figure}
@@ -241,11 +241,6 @@ from(bucket: "esp32state")
 |> filter(fn: (r) => r._measurement == "esp32")
 |> group(columns: ["device_id"])
 |> count()
-|> group(columns: ["device_id"])
-|> map(fn: (r) => ({ 
-	_value: r._value,
-	device_id: r.device_id
-}))
 |> yield(name: "count")
 \end{lstlisting}
 
@@ -276,7 +271,7 @@ Slika \ref{fig:notif_policy} sadrži prikaz notifikacijskih politika. Vidljiva j
 	\label{fig:notif_policy}
 \end{figure}
 
-Kreirani su predlošci za naslov i tijelo obavijesti alarma. Kao što je ranije opisano, korišteni su predlošci programskog jezika Go. Svaka poruka e-pošte koja se pošalje putem točke kontakta formatirana je na temelju kreiranog predloška. U nastavku su navedeni predlošci za naslov i tijelo poruke. Predložak za naslov je jednostavan, te osim naziva alarma sadrži jedino provjeru je li poslana obavijest o aktivaciji ili razrješenju alarma. S druge strane, predložak za tijelo koristi puno više sadržaja samog alarma za generiranje obavijesti. Na početku samog predloška definirane su varijable za poruku, sažetak i opis alarma. Sve tri varijable su navedene jer postoji mogućnost da će kreirani alarm imati jedno ili pak više od opisnih polja, stoga je važno uzeti u obzir sve opcije. Nakon toga, ovisno o tome postoje li varijable ili ne, uključuju se u predložak. Budući da je alarme moguće pridružiti nadzornim pločama, ako je navedenom alarmu pridružen panel odnosno nadzorna ploča, prikazat će se izravna poveznica na ploču. Nadalje se prikazuju sve oznake definirane u alarmu kao i vrijednosti samih izraza korištenih u alarmu kako bi obavijest bila potpunog sadržaja i kako bi korisnik zaključio je li potrebno brzo reagirati na obavijest.
+Kreirani su predlošci za naslov i tijelo obavijesti alarma. Kao što je ranije opisano, korišteni su predlošci programskog jezika Go. Svaka poruka e-pošte koja se pošalje putem točke kontakta formatirana je na temelju kreiranog predloška. U nastavku su navedeni predlošci za naslov i tijelo poruke. Predložak za naslov je jednostavan, te osim naziva alarma sadrži jedino provjeru je li poslana obavijest o aktivaciji ili razrješenju alarma. S druge strane, predložak za tijelo koristi puno više sadržaja samog alarma za generiranje obavijesti. Na početku samog predloška definirane su varijable za poruku, sažetak i opis alarma. Sve tri varijable su navedene jer postoji mogućnost da će kreirani alarm imati jedno ili pak više od opisnih polja, stoga je važno uzeti u obzir sve opcije. Nakon toga, ovisno o tome postoje li varijable ili ne, uključuju se u predložak. Budući da je alarme moguće pridružiti nadzornim pločama, ako je navedenom alarmu pridružen panel odnosno nadzorna ploča, prikazat će se izravna poveznica na ploču. Nadalje se prikazuju sve oznake definirane u alarmu kao i vrijednosti samih izraza korištenih u alarmu kako bi obavijest bila potpunog sadržaja i kako bi korisnik zaključio je li potrebno brzo reagirati na obavijest. Spojnice na početku i kraju pojedinih izraza služe za uklanjanje praznih znakova. 
 
 \begin{lstlisting}[caption={Predlošci za naslov i tijelo obavijesti alarma}, language=go]
 {{ define "jgavran_title_template" }}
