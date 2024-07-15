@@ -41,13 +41,7 @@ AWS podržava sljedeće komunikacijske protokole za IoT sustave:
 	\item TLS.
 \end{itemize}
 
-U nastavku su opisane usluge koje nudi AWS za razvoj IoT sustava.
-
-\section{AWS IoT Core}
-
-AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan \engl{lightweight} protokol za prijenos poruka temeljen na objavi/pretplati sustavu u kojoj glavnu ulogu ima broker kao posrednik, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Komponenta također ima ugrađenu podršku za upravljanje MQTT brokerom koji podržava trajne, uvijek uključene veze, napredna pravila zadržavanja poruka te obrađuje više uređaja i tema istovremeno. Isto tako, AWS IoT Core podržava najnoviji standard MQTT 5 i kompatibilan je s prethodnim standardom MQTT 3, što omogućuje učinkovito upravljanje heterogenim implementacijama s mnoštvom specifikacija. Nadalje, komponenta omogućava višestruke metode provjere autentičnosti i pristupne politike za zaštitu rješenja od ranjivosti. Štoviše, koristeći pomoć drugih usluga u sklopu platforme kao što je AWS IoT Core Device Advisor, moguće je pristupiti unaprijed izgrađenim paketima testova za provjeru MQTT funkcionalnosti uređaja tijekom faze razvoja.
-
-Na slici \ref{fig:aws_iot_core_overview} nalazi se pregled rada usluge AWS IoT Core.
+AWS IoT Core ključna je komponenta za integraciju oblaka i fizičkih uređaja. Omogućava povezivanje uređaja i preusmjeravanje poruka na usluge AWS-a. Koristi MQTT koji je standardni protokol za razmjenu poruka u IoT sustavima. To je lagan \engl{lightweight} protokol za prijenos poruka temeljen na objavi/pretplati sustavu u kojoj glavnu ulogu ima broker kao posrednik, te je pogodan za povezivanje udaljenih uređaja uz minimalnu potrošnju \cite{what_is_mqtt}. AWS IoT Core pruža paletu značajki za razmjenu poruka temeljenih na protokolu MQTT, koje pomažu pri izradi prilagodljive i skalabilne IoT arhitekture \cite{aws_docs}. Komponenta također ima ugrađenu podršku za upravljanje MQTT brokerom koji podržava trajne, uvijek uključene veze, napredna pravila zadržavanja poruka te obrađuje više uređaja i tema istovremeno. Isto tako, AWS IoT Core podržava najnoviji standard MQTT 5 i kompatibilan je s prethodnim standardom MQTT 3, što omogućuje učinkovito upravljanje heterogenim implementacijama s mnoštvom specifikacija. Nadalje, komponenta omogućava višestruke metode provjere autentičnosti i pristupne politike za zaštitu rješenja od ranjivosti. Štoviše, koristeći pomoć drugih usluga u sklopu platforme kao što je AWS IoT Core Device Advisor, moguće je pristupiti unaprijed izgrađenim paketima testova za provjeru MQTT funkcionalnosti uređaja tijekom faze razvoja. Na slici \ref{fig:aws_iot_core_overview} nalazi se pregled rada usluge AWS IoT Core.
 
 \begin{figure}[ht]
 	\centering
@@ -99,7 +93,7 @@ AWS IoT Core osigurava pouzdano aplikacijsko iskustvo iako uređaji nisu uvijek 
 
 Sjena uređaja \engl{Device Shadow} dokument je u JSON formatu koji se koristi za pohranu i dohvat trenutnog stanja i informacija o uređaju. AWS nudi uslugu koja održava stanje uređaja \engl{Device Shadow service} kako bi aplikacije mogle komunicirati s uređajem bez obzira je li uređaj na mreži ili ne. Kada uređaj nije priključen na mrežu, usluga sjene uređaja upravlja podacima za povezane uređaje. Kada se uređaj ponovno spoji na mrežu, sinkronizira stanje sa sjenom uređaja koja se nalazi u oblaku. Uređaji također mogu objavi svoje stanje usluzi u bilo kojem trenutku kako bi bilo na raspolaganju drugim aplikacijama i uređajima. 
 
-\subsection{AWS IoT Fleet Provisioning}
+\section{AWS IoT Fleet Provisioning}
 
 Kao što je ranije navedeno, AWS nudi uslugu registracije uređaja u sustav čime uređaj dobiva pristup ostalim uslugama unutar platforme, poput povezivanja na MQTT broker. Moguće je dinamički registrirati više uređaja pomoću privremenih ili trajnih certifikata, što se naziva provizioniranje flote \engl{fleet provisioning}. Pomoću ove usluge AWS generira i sigurno dostavi certifikate te privatne ključeve na uređaje pri prvom povezivanju na platformu. AWS izdaje klijentske certifikate koji su potpisani certifikacijskim tijelom tvrtke Amazon \engl{Certificate Authority - CA} \cite{aws_docs}.
 
@@ -185,13 +179,13 @@ Odjeljak \textit{resursi} u predlošku definira resurse koji su potrebni uređaj
 
 Valja napomenuti kako je moguće u korisničkom sučelju platforme odabrati sve parametre, te kreiranje vlastitog dokumenta u JSON formatu nije potrebno, nego se automatski generira iz korisničkog odabira u sučelju. 
 
-\subsection{AWS IoT Device Shadow}
+\section{AWS IoT Device Shadow}
 
 Usluga sjene uređaja \engl{Device Shadow} omogućava održavanje trenutnog stanja uređaja, čak i kada su uređaji privremeno nedostupni. AWS nudi uslugu koja održava stanje uređaja kako bi aplikacije mogle komunicirati s uređajem bez obzira je li uređaj na mreži ili ne. Kada uređaj nije priključen na mrežu, usluga sjene uređaja upravlja podacima za povezane uređaje. Kada se uređaj ponovno spoji na mrežu, sinkronizira stanje sa sjenom uređaja koja se nalazi u oblaku. Uređaji također mogu objaviti svoje stanje usluzi u bilo kojem trenutku kako bi bilo na raspolaganju drugim aplikacijama i uređajima. Ova funkcionalnost ključna je za slučajeve u kojima uređaji nemaju konstantnu povezanost na mrežu ili rade u udaljenim ili nepouzdanim mrežnim uvjetima.
 
 Stvari \engl{things} u platformi nemaju nikakvu sjenu dok se eksplicitno ne kreiraju. Sjene se mogu stvarati, ažurirati i brisati pomoću sučelja, no i sami uređaji protokolom MQTT mogu slati poruke na rezervirane teme te tako mijenjati vlastitu sjenu. Budući da AWS pohranjuje sjene u oblaku, podaci o stanju uređaja mogu se slati drugim aplikacijama i uslugama u oblaku bez obzira je li uređaj povezan ili ne.  Dok su uređaji, aplikacije i druge usluge u oblaku povezane s AWS IoT, mogu pristupiti trenutnom stanju uređaja i kontrolirati ga putem njegovih sjena. Traženjem promjene stanja na uređaju ažuriranjem sjene, AWS objavljuje poruku koja označava promjenu na uređaju, čime signalizira uređaju da ažurira svoje stanje sukladno zatraženom i objavljuje poruku s ažuriranim stanjem. Ukoliko dođe do pucanja internetske mreže na uređaju, pri ponovnom spajanju uređaj dohvaća novo stanje te interno ažurira dosadašnje.
 
-Usluga podržava imenovane i neimenovane, odnosno klasične, sjene. Stvar može imati više imenovanih, no najviše jednu klasičnu sjenu. Također može imati rezerviranu imenovanu sjenu koja radi slično kao i imenovana sjena, no nema mogućnost promjene imena. Pomoću imenovanih sjena moguće je stvoriti različite poglede na stanje uređaja odnosno stvari. Primjerice, stvar s puno parametara ili svojstava može se podijeliti u sjene s logičkim skupinama parametara, a svaka sjena ima naziv prikladan skupini svojstava. Istom se metodom može ograničiti pristup pojedinim svojstvima uređaja tako što samo određene aplikacije imaju pristup imenovanoj sjeni, dok druge nemaju. Pristup imenovanim i neimenovanim sjenama razlikuje se u MQTT temi pomoću koje AWS i uređaj komuniciraju. U nastavku su navedene obje teme. 
+Usluga podržava imenovane i neimenovane, odnosno klasične, sjene. Stvar može imati više imenovanih, no najviše jednu klasičnu sjenu. Također može imati rezerviranu imenovanu sjenu koja radi slično kao i imenovana sjena, no nema mogućnost promjene imena. Pomoću imenovanih sjena moguće je stvoriti različite poglede na stanje uređaja odnosno stvari. Primjerice, stvar s puno parametara ili svojstava može se podijeliti u sjene s logičkim skupinama parametara, a svaka sjena ima naziv prikladan skupini svojstava. Istom se metodom može ograničiti pristup pojedinim svojstvima uređaja tako što samo određene aplikacije imaju pristup imenovanoj sjeni, dok druge nemaju. Pristup imenovanim i neimenovanim sjenama razlikuje se u MQTT temi pomoću koje AWS i uređaj komuniciraju. Sljedeći programski isječak navodi obje teme vezane za sjenu uređaja. Prva je tema za neimenovanu, a druga za imenovanu sjenu uređaja. 
 
 \begin{lstlisting}[caption={Teme za sjene uređaja}]
 	$aws/things/{thingName}/shadow
@@ -242,7 +236,7 @@ Nadalje, ne postoji garancija da će poruke dospjeti u AWS pravilnim vremenskim 
 
 Isto tako, moguće je i postaviti klijenski token, koji mora biti jedinstven za svako ažuriranje sjene, no može se ponovno koristiti po završetku ažuriranja. Njegova je glavna funkcija omogućavanje praćenja i identifikacije specifičnih zahtjeva i odgovora između klijenta i usluge AWS. Tokenom se mogu povezati željene poruke s rezultirajućim stanjima. Također služe za praćenje odakle zahtjevi za promjenom dolaze.  
 
-\subsection{AWS IoT Jobs}
+\section{AWS IoT Jobs}
 
 Pokretanje poslova u sklopu usluge AWS IoT Jobs, kao što je ranije spomenuto, služi za udaljene operacije na fizičkim uređajima povezanih s platformom. 
 
@@ -264,6 +258,7 @@ Za zakazane poslove koji se izvršavaju tijekom prozora održavanja s ručno pos
 
 \begin{table}[ht!]
 	\centering
+	\small
 	\caption{Polja formata tipa \textit{cron} \cite{aws_docs}}
 	\begin{tabular}{|c| c| c|}
 		\hline
@@ -313,6 +308,7 @@ Isto tako, postoje različita stanja izvršenja samog posla. Izvršenje posla od
 
 \begin{table}[ht!]
 	\centering
+	\small
 	\caption{Stanja izvršenja posla \cite{aws_docs}}
 	\begin{tabular}{|c| c| c| c| c|}
 		\hline
@@ -348,7 +344,7 @@ Isto tako, postoje teme na koje uređaj objavljuje kako bi obavijestio AWS o sta
 	$aws/things/{thingName}/jobs/{jobId}/update/rejected
 \end{lstlisting}
 
-\subsection{AWS IoT OTA}
+\section{AWS IoT OTA}
 
 Usluga AWS IoT OTA \engl{Over-The-Air} usko je vezana za prethodno opisanu uslugu izvršavanja poslova. Ona omogućava bežično ažuriranje softvera na uređajima, čime se osigurava da uređaji rade na najnovijoj i najsigurnijoj inačici programskog koda. Usluga pruža visoku fleksibilnost i kontrolu nad procesom ažuriranja. Mogu se postaviti različite strategije ažuriranja, primjerice fazna ažuriranja, gdje se prvo ažurira manji dio uređaja kako bi se testirala stabilnost novog softvera prije nego se pošalje na sve uređaje. To omogućava brzo otkrivanje i ispravljanje potencijalnih problema bez utjecaja na sve uređaje odjednom. Osim toga, AWS pruža detaljno nadziranje i praćenje uspješnosti svakog OTA zadatka, što dodatno pomaže u upravljanju i dijagnostici. Korištenje ove usluge primarno se oslanja na uređaje koji podržavaju FreeRTOS. 
 
@@ -369,7 +365,7 @@ Pri kreiranju OTA ažuriranja, usluga za upravljanje OTA ažuriranjima \engl{OTA
 
 Datoteka koja će se izvršiti na uređaju ključna je komponenta ažuriranja i ona mora biti pohranjena na platformi kako bi se pri svakom izvršavanju posla dohvatila i poslala na ciljne uređaje. Pohrana datoteka omogućena je uslugom Amazon S3 pohrane \engl{Amazon Simple Storage Service Bucket}. To je osnovna komponenta platforme AWS za skladištenje objekata i datoteka. Spremnici \engl{buckets} omogućavaju korisnicima pohranu i preuzimanje velike količine podataka putem skalabilnog i visoko dostupnog sučelja. Pohranjeni objekti mogu biti bilo koje vrste, uključujući slike, videozapise, dokumente, baze podataka i pričuvne kopije. Svaki objekt čuva se u spremniku s jedinstvenim ključem. Podaci u spremnicima automatski su replicirani preko više uređaja i objekata unutar jedne AWS regije, čime se osigurava otpornost na greške i visoka dostupnost podataka. Također, usluga podržava različite mehanizme za kontrolu pristupa i politike, čime se precizno definira pristup podacima. Isto tako, S3 podržava verzioniranje, što omogućava korisnicima da čuvaju više verzija istog objekta unutar jednog spremnika. Stoga, kako bi se datoteka ažuriranja mogla poslati putem posla na uređaj, potrebno je kreirati novi spremnik u S3 i unutra pohraniti željenu binarnu datoteku. Isto tako, radi potvrde o valjanosti datoteke potrebno je ili pri pohrani digitalno potpisati datoteku ili pak pri kreiranju posla ažuriranja definirati parametre potpisivanja kojima će se dokument potpisati, poput kriptografskog algoritma i potpisa u formatu PEM \engl{Privacy-Enhanced Mail}. Prva je opcija preporučena. 
 
-\subsection{Ostale dostupne IoT usluge u sustavu AWS}
+\section{Ostale dostupne IoT usluge u sustavu AWS}
 
 Uz ranije opisanu glavnu komponentu IoT Core koju nudi AWS za stvaranje IoT aplikacija, u samom ekosustavu nalazi se još mogućnosti za jednostavniju integraciju oblaka i fizičkih uređaja. U nastavku su ukratko opisane ostale usluge koje se mogu integrirati uz jezgrenu uslugu AWS IoT Core.
 

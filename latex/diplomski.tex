@@ -31,7 +31,7 @@
 	commentstyle=\color{codegreen},
 	keywordstyle=\color{magenta},
 	stringstyle=\color{codepurple},
-	basicstyle=\ttfamily,
+	basicstyle=\ttfamily\small,
 	breakatwhitespace=false,         
 	breaklines=true,                 
 	captionpos=b,                    
@@ -121,15 +121,17 @@
 
 \title{Sustav za udaljeni nadzor u poljoprivredi temeljen na platformi ESP32-C3 i AWS-uslugama}
 \begin{sazetak}
-U ovom radu implementiran je IoT sustav za preciznu poljoprivredu korištenjem razvojnog sustava ESP32-C3-DevKitM-1 i platforme za računarstvo u oblaku AWS. Na razvojni je sustav spojena senzorska mreža za praćenje poljoprivrednih uvjeta. Korištene su biblioteke koje omogućuju povezivanje ugradbenog sustava s oblakom putem Wi-Fi mreže. Korišten je protokol MQTT za prijenos podataka s uređaja na platformu. Korištena je baza InfluxDB za pohranu podataka u oblaku. Razvijena je web aplikacija na temelju aplikacije Grafana za vizualizaciju prikupljenih podataka. Razvijen je alarmni sustav za obavještavanje o promjeni nadziranih parametara.
+U ovom radu implementiran je IoT sustav za preciznu poljoprivredu temeljen na razvojnom sustavu ESP32-C3-DevKitM-1 i platformi za računarstvo u oblaku AWS. Na razvojni je sustav spojena senzorska mreža za praćenje razčičitih poljoprivrednih uvjeta. Korištena je programska biblioteka ESP-AWS-IoT koja omogućuje povezivanje ugradbenog sustava s AWS oblakom putem Wi-Fi mreže. 
+% korištene su programske biblioteke - to je nešto preopširno i ne kaže bitnu informaciju; stavio sam nešto konkretnije, vidite trebali li još koju bibliteku dodati
+Korišten je protokol MQTT za prijenos podataka s uređaja na platformu u oblaku. Korištena je baza podataka InfluxDB za pohranu podataka u oblaku. Razvijena je web aplikacija temeljena na aplikaciji Grafana za vizualizaciju prikupljenih podataka. Razvijen je alarmni sustav za obavještavanje o promjeni nadziranih parametara.
 
 \kljucnerijeci{IoT, ESP32-C3-DevKitM-1, AWS, MQTT, InfluxDB, Grafana, računarstvo u oblaku, precizna poljoprivreda}
 \end{sazetak}
 
 % TODO: Navedite naslov na engleskom jeziku.
-\engtitle{System For Remote Monitoring In Agriculture Based On ESP32-C3 Platform and AWS Services}
+\engtitle{System for remote monitoring in agriculture based on ESP32-C3 platform and AWS services}
 \begin{abstract}
-This thesis describes an implementation of an IoT system for precision agriculture using ESP32-C3-DevKitM-1 development board and AWS platform for cloud computing. A sensor network for monitoring agricultural conditions is connected to the development board. Libraries which connect the embedded system and the cloud platform using Wi-Fi have been used. MQTT protocol is used for data transmission from the device to the platform. InfluxDB database is employed for cloud data storage.A web application based on Grafana is developed for visualizing the collected data. An alerting system is developed to notify users of changes in the monitored parameters.
+This thesis describes an implementation of an IoT system for precision agriculture based on ESP32-C3-DevKitM-1 development system and AWS platform for cloud computing. A sensor network for monitoring agricultural conditions is connected to the development system. ESP-AWS-IoT library is used to connect the embedded system and the cloud platform over Wi-Fi. MQTT protocol is used for data transmission from the device to the cloud platform. InfluxDB database is employed for cloud data storage. A web application based on Grafana was developed for visualization of the collected data. An alerting system was developed with a goal to notify users of changes in the monitored parameters.
 
 \keywords{IoT, ESP32-C3-DevKitM-1, AWS, MQTT, InfluxDB, Grafana, cloud computing, precision agriculture}
 \end{abstract}

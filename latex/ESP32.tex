@@ -20,8 +20,6 @@ Modul ESP32-C3-MINI-1 bežični je uređaj niske potrošnje energije \engl{ultra
 	\label{fig:esp32block}
 \end{figure}
 
-\section{Wi-Fi}
-
 IEEE 802.11, skupina standarda za bežične lokalne mreže \engl{WLANs} \cite{ieee}, nudi nekoliko različitih načina bežične modulacije signala. Pojedini standardi označeni su slovima abecede. Za korisničke mreže postoje dva frekvencijska pojasa: 2,4 GHz i 5 GHz. 
 
 Prednosti pojasa od 2,4 GHz su veći doseg, bolje prolaženje kroz fizičke prepreke te bolja podrška jer više bežičnih uređaja koristi pojas od 2,4 GHz nego od 5 GHz. S druge strane, ovaj pojas ima manju propusnost i nudi manje kanala koji se ne preklapaju. Isto tako, može doći do zagušenja mreže jer kućni i Bluetooth uređaji koriste ovaj isti mrežni pojas.
@@ -65,17 +63,17 @@ Na slici \ref{fig:station_scenario} prikazan je sekvencijski dijagram zadataka k
 Slika \ref{fig:ap_scenario} modelira slučaj u kojem ESP32 ima ulogu pristupne točke. Scenarij je vrlo sličan ranije opisanom slijedu događaja, no razlikuje se u dvije faze i događajima koji su pohranjeni u sustavu. Ovaj način rada nema fazu detekcije promjene IP adrese, jer je u ovom načinu ESP32 upravo taj uređaj čija se IP adresa može promijeniti. Isto tako, ne postoji faza dohvata IP adrese. 
 
 \begin{figure}[ht]
-	\begin{minipage}[t]{0.4\textwidth}
-		\includegraphics[width=\linewidth]{imgs/station_scenario}
-		\caption{Primjer scenarija Wi-Fi povezivanja u načinu rada stanice \cite{espressif}}
-		\label{fig:station_scenario}
-	\end{minipage}
-	\hspace*{\fill}
-	\begin{minipage}[t]{0.4\textwidth}
-		\includegraphics[width=\linewidth]{imgs/ap_scenario}
-		\caption{Primjer scenarija Wi-Fi povezivanja u načinu rada pristupne točke \cite{espressif}}
-		\label{fig:ap_scenario}
-	\end{minipage}
+	\centering
+	\includegraphics[scale=0.3]{imgs/station_scenario}
+	\caption{Primjer scenarija Wi-Fi povezivanja u načinu rada stanice \cite{espressif}}
+	\label{fig:station_scenario}
+\end{figure}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.3]{imgs/station_scenario}
+	\caption{Primjer scenarija Wi-Fi povezivanja u načinu rada pristupne točke \cite{espressif}}
+	\label{fig:ap_scenario}
 \end{figure}
 
 U modulu ESP32 stavljen je veliki naglasak na mehanizme uštede energije, što se također preslikava na korištenje Wi-Fi veze. Modul pruža načine uštede energije i pri radu kao stanica i pristupna točka, no neke značajke nisu podržane u pristupnoj točki. Modul pri neaktivnosti može otići u stanje mirovanja \engl{sleep mode}. Postoje dva načina uštede energije u načinu rada stanice: minimalna i maksimalna ušteda. Pri minimalnoj uštedi stanica se budi iz stanja mirovanja nakon svakog DTIM intervala \engl{Delivery Traffic Indication Message}. Ovim se načinom ne gube globalno emitirane poruke \engl{broadcast} jer se one prenose nakon DTIM intervala. Međutim, ova metoda ne štedi puno energije ako je pristupna točka na koju je spojen modul postavila malen interval. Pri maksimalnoj uštedi moguće je znatno produžiti vrijeme mirovanja u odnosu na DTIM interval, no ovime se riskira gubitak globalno emitiranih poruka. 

@@ -77,6 +77,7 @@ Za povezivanje mobilnog uređaja na privremenu pristupnu točku koju emitira raz
 
 \begin{table}[ht!]
 	\centering
+	\small
 	\caption{Povezivanje uređaja i LCD zaslona}
 	\begin{tabular}{|c| c|}
 		\hline
@@ -202,7 +203,7 @@ esp_vfs_spiffs_conf_t conf = {
 
 void filesystem_init(void)
 {
-	// Use settings defined above to initialize and mount SPIFFS filesystem.
+	// Use above settings to init and mount SPIFFS filesystem.
 	esp_err_t ret = esp_vfs_spiffs_register(&conf);
 	
 	if (ret != ESP_OK) {
@@ -229,13 +230,12 @@ void filesystem_init(void)
 
 void filesystem_deinit(void)
 {
-	// All done, unmount partition and disable SPIFFS
 	esp_vfs_spiffs_unregister(conf.partition_label);
 	ESP_LOGI(TAG, "SPIFFS unmounted");
 }
 \end{lstlisting}
 
-Sljedeći programski odsječak prikazuje uspostavu MQTT sjednice pomoću certifikata zahtjeva te podnošenje zahtjeva za novim certifikatom. Na samom početku najprije se certifikati s definiranom putanjom učitaju u modul PKCS za daljnje korištenje. U odsječku se također može primijetiti binarna serijalizacija podataka. Format CBOR \engl{Concise Binary Object Representation} Representation), za razliku od formata JSON, pretvara podatke u binarni oblik te ih tako šalje mrežom, što rezultira manjom latencijom i nosivošću \engl{payload} \cite{cbor}. Pri prijenosu velike količine podataka pri ograničenim resursima, poput u IoT sustava, ušteda na veličini poslanih podataka znatno utječe na efikasnost sustava. Isto tako, binaran je format prilagodljiv u odnosu na JSON, gdje mora postojati unaprijed definirana shema za primitak podataka.
+Sljedeći programski odsječak prikazuje uspostavu MQTT sjednice pomoću certifikata zahtjeva te podnošenje zahtjeva za novim certifikatom. Na samom početku najprije se certifikati s definiranom putanjom učitaju u modul PKCS za daljnje korištenje. U odsječku se također može primijetiti binarna serijalizacija podataka. Format CBOR \engl{Concise Binary Object Representation} Representation), za razliku od formata JSON, pretvara podatke u binarni oblik i tako ih šalje mrežom, što rezultira manjom latencijom i nosivošću \engl{payload} \cite{cbor}. Pri prijenosu velike količine podataka s ograničenim resursima, kao u IoT sustavima, ušteda na veličini poslanih podataka znatno utječe na efikasnost sustava. Isto tako, binaran je format prilagodljiv u odnosu na JSON, gdje mora postojati unaprijed definirana shema za primitak podataka.
 
 \begin{lstlisting}[caption={Spajanje certifikatom zahtjeva i zahtjev za novim certifikatom}, language=c]
 /* Insert the claim credentials into the PKCS #11 module */
@@ -270,6 +270,7 @@ Razvijeni sustav, osim zaslona, sadrži dva senzora koja mjere stanja iz okoline
 
 \begin{table}[h]
 	\centering
+	\small
 	\begin{minipage}{0.45\textwidth}
 		\centering
 		\begin{tabular}{|c|c|}
@@ -301,7 +302,7 @@ Razvijeni sustav, osim zaslona, sadrži dva senzora koja mjere stanja iz okoline
 
 Glavna funkcija senzora DHT11 jest mjerenje temperature i vlažnosti okoline. Senzor je tvornički kalibriran te može mjeriti temperaturu od 0°C do 50°C i vlažnost od 20\% do 90\% s točnošću od ±1°C i ±1\%. Senzor uključuje komponentu za mjerenje vlažnosti i NTC \engl{Negative Temperature Coefficient} komponentu za mjerenje temperature. DHT11 može se nabaviti kao senzor ili kao modul. Senzor dolazi kao 4-pinski paket od kojeg se koriste samo tri pina, dok modul dolazi s tri pina. Razlika između modula i senzora je u tome što modul ima ugrađeni kondenzator za filtriranje i otpornik za lakše spajanje s razvojnim sustavom \cite{dht11}. U razvijenom je sustavu korišten modul koji već ima integriran otpornik. 
 
-Komunikacija i sinkronizacija između mikrokontrolera i senzora odvija se jednom podatkovnom linijom. Inicijalizacija komunikacije zahtijeva interakciju mikrokontrolera povlačenjem i otpuštanjem signala, čime jedan drugom signaliziraju spremnost na prijenos podataka. Najprije mikrokontroler povlači signal na nisku razinu na najmanje 18 milisekundi, nakon čega otpušta signal i pušta ga da se vrati na visoku razinu te čeka senzor da ga spusti natrag na nisku. DHT11 zatim povlači signal na nisku razinu na otprilike 80 mikrosekundi, nakon čega otpušta signal te se on vraća ponovno na visoku razinu, i taj proces također traje oko 80 mikrosekundi. Po završetku inicijalizacije DHT11 sekvencijalno prenosi 40 podatkovnih bitova, gdje prvi i treći bajt predstavljaju vlagu zraka i temperaturu. Drugi i četvrti bajt sadrže samo nule, a peti je kontrolni zbroj \engl{checksum} svih ostalih bajtova na sljedeći način:
+Komunikacija i sinkronizacija između mikrokontrolera i senzora odvija se jednom podatkovnom linijom. Inicijalizacija komunikacije zahtijeva interakciju mikrokontrolera povlačenjem i otpuštanjem signala, čime jedan drugom signaliziraju spremnost na prijenos podataka. Najprije mikrokontroler povlači signal na nisku razinu na najmanje 18 milisekundi, nakon čega otpušta signal i pušta ga da se vrati na visoku razinu te čeka senzor da ga spusti natrag na nisku. DHT11 zatim povlači signal na nisku razinu na otprilike 80 mikrosekundi, nakon čega otpušta signal te se on vraća ponovno na visoku razinu, i taj proces također traje oko 80 mikrosekundi. Po završetku inicijalizacije DHT11 sekvencijalno prenosi 40 podatkovnih bitova, gdje prvi i treći bajt predstavljaju vlagu zraka i temperaturu. Drugi i četvrti bajt sadrže samo nule, a peti je kontrolni zbroj \engl{checksum} svih ostalih bajtova na način prikazan u nastavku. Taj zbroj služi kao provjera jesu li ostali bajtovi uspješno poslani. 
 
 \begin{lstlisting}[caption={Kontrolni zbroj poslanih bajtova s DHT11}, language=c]
 	byte_5 == (byte_1 + byte_2 + byte_3 + byte_4) & 0xFF
@@ -609,6 +610,7 @@ Za korištenje OTA funkcionalnosti potrebno je kreirati dodatne particije na ure
 
 \begin{table}[ht!]
 	\centering
+	\small
 	\caption{Particije na uređaju}
 	\begin{tabular}{|c| c| c| c| c|}
 		\hline
@@ -640,7 +642,7 @@ Sljedeći programski isječak prikazuje pokretanje OTA agenta. Veći dio funkcio
 \end{enumerate}
 
 \begin{lstlisting}[caption={Rad OTA agenta}, language=c]
-    /* Set OTA Library interfaces.*/
+/* Set OTA Library interfaces.*/
 setOtaInterfaces( &otaInterfaces );
 
 /* Set OTA Code Signing Certificate */

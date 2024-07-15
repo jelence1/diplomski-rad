@@ -209,7 +209,7 @@ Moguće je kreirati i predloške za slanje poruka u obavijesti. Za kreiranje pre
 
 Predlošci se pišu koristeći sintaksu dvostrukih zagrada \lstinline|{{...}}| koje označavaju mjesta gdje će se dinamički umetnuti sadržaj. Unutar ovih zagrada mogu se koristiti različite naredbe poput varijabli, funkcija, petlji i uvjetnih izraza. Podaci se u predloške ubacuju kroz kontekst koji je struktura ili rječnik podataka proslijeđen predlošku pri njegovu izvršavanju. Unutar primatelja obavijesti, predložak se učitava i obrađuje, nakon čega se izvršava s određenim podacima pomoću posebnih funkcija izvršavanja. Pri izvršavanju, dinamički podaci zamjenjuju odgovarajuće oznake unutar predloška, generirajući konačni izlazni sadržaj. Sustav predložaka omogućuje i definiranje prilagođenih funkcija koje se mogu koristiti unutar predložaka. Ovo omogućuje proširenje funkcionalnosti predložaka dodavanjem specifičnih operacija koje se mogu izvršavati nad podacima, čime se povećava fleksibilnost cijelog sustava predložaka \cite{go_templating}. 
 
-Sljedeći odsječak koda prikazuje primjer jednog predloška u programskom jeziku Go kakav bi se mogao naći u točki kontakta alarmnog sustava Grafane. Unutar definiranog predloška prolazi se po svim generiranim alarmima i za svaki alam iz popisa oznaka odabere se oznaka s ključem \textit{alertname}. Isto tako, provjerava se trenutno stanje alarma i na temelju dobivene varijable generira se ostatak poruke. 
+Sljedeći je isječak primjer jednog predloška kakav bi se mogao naći u točki kontakta. Unutar definiranog predloška prolazi se po svim generiranim alarmima i za svaki alarm iz popisa oznaka odabere se oznaka s ključem \textit{alertname}. Isto tako, provjerava se trenutno stanje alarma i na temelju dobivene varijable generira se ostatak poruke. 
 
 \begin{lstlisting}[caption={Primjer predloška u programskom jeziku Go}, language=go]
 {{ define "custom_alert_template" }}
@@ -228,7 +228,7 @@ Predlošci u jeziku Go prate određenu strukturu, te se varijable predloška mij
 
 \begin{figure}[ht]
 	\centering
-	\includegraphics[scale=0.4]{imgs/grafana_templating}
+	\includegraphics[scale=0.35]{imgs/grafana_templating}
 	\caption{Primjer testiranja predloška nad probnim alarmom}
 	\label{fig:grafana_templating}
 \end{figure}
@@ -319,7 +319,7 @@ Sljedeća slika prikazuje obavijest dobivenu na temelju opisanog alarma koji je 
 
 \begin{figure}[ht]
 	\centering
-	\includegraphics[scale=0.6]{imgs/alert_mail}
+	\includegraphics[scale=0.7]{imgs/alert_mail}
 	\caption{E-pošta o razriješenom alarmu}
 	\label{fig:alert_mail}
 \end{figure}
@@ -336,17 +336,17 @@ Kao što je već spomenuto, alarmi se mogu pridružiti pojedinim panelima. Tako 
 Sljedeće dvije slike \ref{fig:firing_low_moisture} i \ref{fig:ok_low_moisture} prikazuju obavijesti dobivene pri aktivaciji i razrješenju alarma. Vrijednosti izraza A i B odnose se na strukturu samog alarma. Izraz A jest vrijednost samog upita, dok je izraz B procjena postavljenog uvjeta. Iz prve se obavijesti može vidjeti da je vrijednost izraza A bila jednaka nuli, što je vidljivo i na gornjem grafu. Budući da je uvjet postavljen u izrazu B zadovoljen, odnosno vrijednost izraza A je manja od 20, vrijednost izraza B jednaka je jedinici, što signalizira aktivaciju alarma. S druge strane, u obavijesti razrješenja alarma vrijednost izraza A jednaka je 52.68, što je više od postavljenog uvjeta izraza B, stoga je njegova vrijednost jednaka nuli. 
 
 \begin{figure}[ht]
-	\begin{minipage}[t]{0.4\textwidth}
-		\includegraphics[width=\linewidth]{imgs/firing_low_moisture}
-		\caption{Obavijest o aktivaciji alarma niske vlažnosti tla}
-		\label{fig:firing_low_moisture}
-	\end{minipage}
-	\hspace*{\fill}
-	\begin{minipage}[t]{0.4\textwidth}
-		\includegraphics[width=\linewidth]{imgs/ok_low_moisture}
-		\caption{Obavijest o razrješenju alarma niske vlažnosti tla}
-		\label{fig:ok_low_moisture}
-	\end{minipage}
+	\centering
+	\includegraphics[scale=0.55]{imgs/firing_low_moisture}
+	\caption{Obavijest o aktivaciji alarma niske vlažnosti tla}
+	\label{fig:firing_low_moisture}
+\end{figure}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.55]{imgs/ok_low_moisture}
+	\caption{Obavijest o razrješenju alarma niske vlažnosti tla}
+	\label{fig:ok_low_moisture}
 \end{figure}
 
 Alarmi se mogu sukladno napraviti za vlagu i temperaturu zraka. Preporuča se kreirati odvojene alarme za sva senzorska očitanja kako bi imali različite granične vrijednosti. Isto tako, ako korišteni uređaji prate drukčije uvjete gdje su granične vrijednosti različite od postavljenih, moguće je kreirati i alarme specifične uređajima. Potrebno je samo u upit alarma navesti specifičan uređaj nad kojim se ispituju podaci. 
